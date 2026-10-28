@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+.vs/
+.dotnet-home/
+.nuget/
+preview.png
+menu-preview.png
+exe-icon-preview.png
