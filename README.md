@@ -4,6 +4,8 @@ Application Windows 10/11 (x64), en C# / .NET 10 et WPF. Notes colorées indépe
 
 ## Lancer la version portable
 
+[Télécharger la dernière version pour Windows x64](https://github.com/morganbksys-pixel/better-sticky-notes/releases/latest).
+
 Extraire entièrement `BetterStickyNotes-win-x64.zip`, puis lancer `BetterStickyNotes.exe`. Aucun installateur ni installation de .NET nécessaire pour cette distribution autonome.
 
 - Déplacer une note par sa barre supérieure ; redimensionner par les bords.
