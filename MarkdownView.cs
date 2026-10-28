@@ -59,9 +59,9 @@ public static class MarkdownView
         {
             switch (inline)
             {
-                case LiteralInline literal: target.Add(new Run(literal.Content.ToString())); break;
+                case LiteralInline literal: target.Add(new Run(literal.Content.ToString()) { Tag = literal.Span.Start }); break;
                 case LineBreakInline: target.Add(new LineBreak()); break;
-                case CodeInline code: target.Add(new Run(code.Content) { FontFamily = new FontFamily("Consolas"), Background = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0)) }); break;
+                case CodeInline code: target.Add(new Run(code.Content) { Tag = code.Span.Start, FontFamily = new FontFamily("Consolas"), Background = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0)) }); break;
                 case TaskList task:
                     var check = new CheckBox { IsChecked = task.Checked, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 5, 0), ToolTip = "Cocher / décocher" };
                     var offset = task.Span.Start + 1;

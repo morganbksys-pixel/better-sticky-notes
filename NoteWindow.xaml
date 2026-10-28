@@ -4,7 +4,7 @@
     <Grid>
     <Border x:Name="NoteSurface" CornerRadius="14" Padding="1">
         <Grid SizeChanged="ClipSurface">
-            <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="48"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
             <Border Background="#0C000000" CornerRadius="13,13,0,0" MouseLeftButtonDown="DragHeader" ToolTip="Déplacer la note par le bandeau">
                 <Grid Margin="8,0,8,0">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -16,14 +16,17 @@
                         </TextBlock>
                     </Grid>
                     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="PreviewButton" Width="32" Height="30" Padding="0" Background="Transparent" Click="TogglePreview" FontFamily="Segoe MDL2 Assets" FontSize="16" ToolTipService.InitialShowDelay="300"/>
-                        <Button x:Name="PinButton" Click="TogglePin" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="32" Height="30" Padding="0" ToolTip="Épingler au premier plan" AutomationProperties.Name="Épingler au premier plan"/>
                         <Button Content="⋯" Click="OpenMenu" Width="32" Height="30" Padding="0" FontSize="20" Background="Transparent" ToolTip="Options de la note" AutomationProperties.Name="Options de la note"/>
+                        <Button x:Name="PinButton" Click="TogglePin" Width="32" Height="30" Padding="0" ToolTip="Épingler au premier plan" AutomationProperties.Name="Épingler au premier plan"/>
+                        <Button x:Name="HideButton" Click="HideClick" Width="32" Height="30" Padding="0" Background="Transparent" ToolTip="Masquer la note" AutomationProperties.Name="Masquer la note">
+                            <Viewbox Width="19" Height="19"><Canvas Width="24" Height="24"><Path Data="M2,12 C7,4 17,4 22,12 C17,20 7,20 2,12 M15,12 A3,3 0 1 1 9,12 A3,3 0 1 1 15,12 M3,3 L21,21" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/></Canvas></Viewbox>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
-            <TextBox x:Name="Editor" Grid.Row="1" Margin="16,12,14,14" Background="Transparent" BorderThickness="0" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FontSize="14" SpellCheck.IsEnabled="True" Language="fr-FR" AutomationProperties.Name="Contenu Markdown"/>
-            <FlowDocumentScrollViewer x:Name="Previewer" Grid.Row="1" Margin="10,4,10,12" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" IsToolBarVisible="False"/>
+            <TextBox x:Name="Editor" Grid.Row="1" Margin="16,12,14,14" Background="Transparent" BorderThickness="0" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FontSize="14" SpellCheck.IsEnabled="False" Language="fr-FR" AutomationProperties.Name="Contenu Markdown"/>
+            <FlowDocumentScrollViewer x:Name="Previewer" PreviewMouseLeftButtonDown="PreviewDoubleClick" ToolTip="Double-cliquer pour modifier · Ctrl+Entrée pour changer de mode" Grid.Row="1" Margin="10,4,10,12" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" IsToolBarVisible="False"/>
+            <StackPanel x:Name="EditingBar" Grid.Row="2" Orientation="Horizontal" Margin="10,0,10,7" SizeChanged="EditingBarSizeChanged"/>
         </Grid>
     </Border>
     <Border CornerRadius="14" BorderBrush="#35000000" BorderThickness="1" IsHitTestVisible="False"/>

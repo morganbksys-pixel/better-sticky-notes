@@ -16,13 +16,18 @@ public sealed class Note
     public bool Pinned { get; set; }
     public bool Hidden { get; set; }
     public bool Deleted { get; set; }
-    public bool Preview { get; set; }
+    public bool Preview { get; set; } = true;
+    public string? WindowsStickyNoteId { get; set; }
+    public bool? HasPlacement { get; set; }
+    public Note Snapshot() => (Note)MemberwiseClone();
 }
 
 public sealed class NoteStore
 {
     public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterStickyNotes");
     private readonly string path;
+    private readonly object writeLock = new();
+    private Task writeTail = Task.CompletedTask;
     public NoteStore(string? folder = null) => path = Path.Combine(folder ?? Folder, "notes.json");
     public List<Note> Notes { get; private set; } = [];
     public string? LoadWarning { get; private set; }
@@ -48,14 +53,24 @@ public sealed class NoteStore
             n.Height = double.IsFinite(n.Height) ? Math.Clamp(n.Height, 220, 3000) : 360;
             if (!double.IsFinite(n.Left)) n.Left = 120;
             if (!double.IsFinite(n.Top)) n.Top = 120;
+            // Old imports shared the default coordinates; preserve other existing placements.
+            n.HasPlacement ??= !(n.WindowsStickyNoteId != null && n.Left == 120 && n.Top == 120);
         }
     }
     private static List<Note> Read(string file) => JsonSerializer.Deserialize<List<Note>>(File.ReadAllText(file)) ?? throw new JsonException("Fichier vide.");
-    public void Save()
+    public Task SaveAsync()
+    {
+        // Capture immutable values on the UI thread, serialize and write on a worker.
+        var snapshot = Notes.Select(n => n.Snapshot()).ToList();
+        lock (writeLock)
+            return writeTail = writeTail.ContinueWith(_ => Write(snapshot), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+    }
+    public void Save() => SaveAsync().GetAwaiter().GetResult();
+    private void Write(List<Note> snapshot)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
-        File.WriteAllText(temp, JsonSerializer.Serialize(Notes, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(temp, JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true }));
         if (File.Exists(path)) File.Replace(temp, path, path + ".bak");
         else File.Move(temp, path);
     }
