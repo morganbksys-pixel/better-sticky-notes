@@ -46,7 +46,7 @@ internal static class FocusTests
             Check(!note.Preview && editor.Text == "**texte**", "Action de menu applicable à la sélection");
             editor.ContextMenu = null;
 
-            var helpButton = ((StackPanel)window.FindName("EditingBar")).Children.OfType<Button>().Single(b => Equals(b.Content, "?"));
+            var helpButton = ((StackPanel)window.FindName("EditingBar")).Children.OfType<Button>().Single(b => Equals(b.ToolTip, "Aide Markdown"));
             helpButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); PerformanceChecks.Pump();
             var help = (Popup)typeof(NoteWindow).GetField("markdownHelp", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
             Check(help.IsOpen && !note.Preview, "Aide Markdown : édition conservée");

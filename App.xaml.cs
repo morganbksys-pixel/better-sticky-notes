@@ -258,7 +258,7 @@ public partial class App : System.Windows.Application
     {
         var menu = new ContextMenu();
         menu.Items.Add(ActionItem("Nouvelle note", "\uE710", () => NewNote()));
-        menu.Items.Add(ActionItem("Mes notes", "\uE8A5", () => ShowManager()));
+        menu.Items.Add(ActionItem("Mes notes", "\uE8FD", () => ShowManager()));
         menu.Items.Add(new Separator());
         menu.Items.Add(ActionItem("Quitter", "\uE7E8", Quit));
         return menu;

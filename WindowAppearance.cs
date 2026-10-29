@@ -35,16 +35,16 @@ public static class WindowAppearance
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 5, 3) };
         void Add(string text, string label, Action click)
         {
-            var button = new Button { Content = text, Width = 32, Padding = new Thickness(0), ToolTip = label, Background = Brushes.Transparent };
+            var button = new Button { Content = NoteIcons.Glyph(text, 12), Width = 32, Padding = new Thickness(0), ToolTip = label, Background = Brushes.Transparent };
             System.Windows.Automation.AutomationProperties.SetName(button, label);
             button.Click += (_, _) => click(); buttons.Children.Add(button);
         }
         if (window.ResizeMode != ResizeMode.NoResize)
         {
-            Add("−", "Réduire", () => window.WindowState = WindowState.Minimized);
-            Add("□", "Agrandir / Restaurer", () => window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized);
+            Add("\uE921", "Réduire", () => window.WindowState = WindowState.Minimized);
+            Add("\uE922", "Agrandir / Restaurer", () => window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized);
         }
-        Add("×", "Fermer", window.Close);
+        Add("\uE711", "Fermer", window.Close);
         Grid.SetColumn(buttons, 1); header.Children.Add(buttons); layout.Children.Add(header);
         Grid.SetRow(content, 1); layout.Children.Add(content);
         var surface = new Border { Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(210, 212, 215)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Child = layout };

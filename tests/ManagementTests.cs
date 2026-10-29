@@ -27,7 +27,7 @@ internal static class ManagementTests
         Check(loaded.Notes.Single(n => n.Id == notes[0].Id).Deleted, "Suppression vers la corbeille persistée");
         manager.SelectView("trash");
         Check(list.Items.Count == 2 && list.Items.Cast<NotesWindow.Row>().All(r => r.Note.Deleted) && list.SelectedItems.Count == 0, "Onglet corbeille : uniquement les notes supprimées, sélection remise à zéro");
-        Check(manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Vider la corbeille…")).IsEnabled && !manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Restaurer")).IsEnabled,
+        Check(manager.BuildTrashMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Vider la corbeille…")).IsEnabled && !manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Restaurer")).IsEnabled,
             "Vider la corbeille disponible sans sélection, restaurer désactivé");
         ((TextBox)manager.FindName("SearchBox")).Text = "ancienne";
         Check(list.Items.Count == 1, "Recherche limitée à la corbeille");

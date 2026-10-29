@@ -62,8 +62,9 @@ internal static class ProtectionTests
             Check(note.IsLocked, "Verrouillage global");
             app.DeleteNotes([note]);
             Check(note.Deleted && note.IsLocked, "Corbeille conserve la protection");
-            var trash = app.BuildTrayMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Options")).Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Corbeille"));
-            Check(trash.Items.OfType<MenuItem>().Any(i => Equals(i.Header, "Note protégée 🔒")), "Corbeille masque le titre protégé");
+            manager.SelectView("trash");
+            var trash = (DataGrid)manager.FindName("NoteList");
+            Check(trash.Items.Cast<NotesWindow.Row>().Any(row => row.Note == note && row.Title == "Note protégée"), "Corbeille masque le titre protégé");
             app.PermanentlyDeleteNotes([note]);
             PerformanceChecks.Wait(app.SaveNowAsync());
             var appData = Path.Combine(folder, "app");
@@ -104,7 +105,7 @@ internal static class ProtectionTests
         {
             var dialog = app.Windows.OfType<PasswordDialog>().Single();
             dialog.Opacity = 0;
-            var panel = (StackPanel)dialog.Content;
+            var panel = ((Grid)((Border)dialog.Content).Child).Children.OfType<StackPanel>().Single();
             var fields = panel.Children.OfType<PasswordBox>().ToList();
             var submit = panel.Children.OfType<StackPanel>().Single().Children.OfType<Button>().Single(b => b.IsDefault);
             if (tryWrongFirst)

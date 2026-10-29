@@ -26,7 +26,7 @@ public sealed class Note
     [JsonIgnore] public byte[]? ProtectionKey { get; set; }
     [JsonIgnore] public bool IsProtected => Protection != null;
     [JsonIgnore] public bool IsLocked => IsProtected && ProtectionKey == null;
-    [JsonIgnore] public string DisplayTitle => IsLocked ? "Note protégée 🔒" : string.IsNullOrWhiteSpace(Title) ? "Sans titre" : Title;
+    [JsonIgnore] public string DisplayTitle => IsLocked ? "Note protégée" : string.IsNullOrWhiteSpace(Title) ? "Sans titre" : Title;
     public Note Snapshot()
     {
         var snapshot = (Note)MemberwiseClone();

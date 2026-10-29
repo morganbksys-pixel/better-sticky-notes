@@ -41,7 +41,11 @@ internal static class ManagementLayoutTests
         Check(search.Text == "" && list.Items.Count == 1, "Effacer la recherche conserve le groupe");
         ((Button)manager.FindName("TrashButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(((Button)manager.FindName("NewNoteButton")).Visibility == Visibility.Collapsed && list.Items.Cast<NotesWindow.Row>().Single().Note == deleted, "Corbeille autonome : toutes les notes supprimées et aucune création");
-        Check(manager.BuildNotesMenu().Items.OfType<MenuItem>().Any(i => Equals(i.Header, "Purge automatique…")), "Réglage de purge accessible depuis le menu de la corbeille");
+        Check(manager.BuildTrashMenu().Items.OfType<MenuItem>().Any(i => Equals(i.Header, "Purge automatique…")), "Réglage de purge accessible depuis le menu de la corbeille");
+        content.Measure(new Size(724, 440)); content.Arrange(new Rect(0, 0, 724, 440)); content.UpdateLayout();
+        var emptyButton = (Button)manager.FindName("EmptyTrashButton");
+        var emptyBounds = emptyButton.TransformToAncestor(content).TransformBounds(new Rect(emptyButton.RenderSize));
+        Check(emptyButton.Visibility == Visibility.Visible && emptyBounds.Left >= 210 && emptyBounds.Right <= 724 && emptyButton.ActualWidth + emptyButton.Margin.Left + emptyButton.Margin.Right >= emptyButton.DesiredSize.Width - 1, "Bouton Vider accessible à la taille minimale");
         list.SelectAll();
         Check(manager.BuildNotesMenu().Items.OfType<MenuItem>().Any(i => Equals(i.Header, "Restaurer")) && !manager.BuildNotesMenu().Items.OfType<MenuItem>().Any(i => Equals(i.Header, "Afficher")), "Corbeille : actions de sélection adaptées");
         ((Button)manager.FindName("AllNotesButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

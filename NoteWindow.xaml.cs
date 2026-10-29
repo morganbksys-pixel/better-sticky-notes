@@ -131,22 +131,7 @@ public partial class NoteWindow : Window
     private void ApplyPin()
     {
         Topmost = note.Pinned;
-        PinButton.Content = new Viewbox
-        {
-            Width = 20, Height = 20,
-            RenderTransformOrigin = new System.Windows.Point(0.5, 0.5),
-            RenderTransform = new RotateTransform(note.Pinned ? 0 : 35),
-            Child = new Canvas
-            {
-                Width = 24, Height = 24,
-                Children = { new System.Windows.Shapes.Path {
-                    Data = NoteIcons.Pin,
-                    Fill = note.Pinned ? Foreground : Brushes.Transparent,
-                    Stroke = Foreground, StrokeThickness = 1.7,
-                    StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round
-                } }
-            }
-        };
+        PinButton.Content = NoteIcons.Glyph(note.Pinned ? "\uE718" : "\uE77A", 18);
         PinButton.Background = note.Pinned ? new SolidColorBrush(Color.FromArgb(50, 90, 65, 10)) : Brushes.Transparent;
         PinButton.Opacity = note.Pinned ? 1 : 0.6;
         var action = note.Pinned ? "Désépingler — actuellement au premier plan" : "Épingler au premier plan";
@@ -295,8 +280,8 @@ public partial class NoteWindow : Window
     {
         foreach (var (tool, glyph, label) in new[] {
             (MarkdownTool.Bold, "B", "Gras (Ctrl+B)"), (MarkdownTool.Italic, "I", "Italique (Ctrl+I)"),
-            (MarkdownTool.List, "≡", "Liste à puces"), (MarkdownTool.Checklist, "☑", "Checklist"),
-            (MarkdownTool.Code, "</>", "Code — sélection multiligne : bloc de code"), (MarkdownTool.Link, "↗", "Lien (Ctrl+K)") })
+            (MarkdownTool.List, "\uE8FD", "Liste à puces"), (MarkdownTool.Checklist, "\uE73A", "Checklist"),
+            (MarkdownTool.Code, "\uE943", "Code — sélection multiligne : bloc de code"), (MarkdownTool.Link, "\uE71B", "Lien (Ctrl+K)") })
         {
             var button = EditingButton(glyph, label);
             if (tool == MarkdownTool.Bold) button.FontWeight = FontWeights.Bold;
@@ -304,7 +289,7 @@ public partial class NoteWindow : Window
             button.Click += (_, _) => MarkdownEditing.Apply(Editor, tool);
             editingButtons.Add((button, tool, label)); EditingBar.Children.Add(button);
         }
-        overflowButton = EditingButton("⋯", "Autres outils d’édition");
+        overflowButton = EditingButton("\uE712", "Autres outils d’édition");
         overflowButton.Click += (_, _) => {
             var menu = new ContextMenu();
             foreach (var entry in editingButtons.Where(b => b.Button.Visibility == Visibility.Collapsed))
@@ -316,12 +301,13 @@ public partial class NoteWindow : Window
             menu.PlacementTarget = overflowButton; menu.IsOpen = true;
         };
         EditingBar.Children.Add(overflowButton);
-        var help = EditingButton("?", "Aide Markdown");
+        var help = EditingButton("\uE897", "Aide Markdown");
         help.Click += (_, _) => ShowMarkdownHelp(help); EditingBar.Children.Add(help);
     }
     private static Button EditingButton(string text, string label)
     {
         var button = new Button { Content = text, ToolTip = label, Width = 32, Height = 28, Padding = new Thickness(0), Background = Brushes.Transparent, Focusable = false, FontSize = 13 };
+        if (text is not ("B" or "I")) button.Content = NoteIcons.Glyph(text, 13);
         System.Windows.Automation.AutomationProperties.SetName(button, label);
         return button;
     }

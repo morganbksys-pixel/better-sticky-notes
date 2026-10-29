@@ -78,12 +78,22 @@ public partial class App
             Dispatcher.Invoke(LockProtectedNotes);
     }
 
-    public void ConfirmPermanentDeletion(IEnumerable<Note> notes)
+    public void ConfirmEmptyTrash() => ConfirmPermanentDeletion(Store.Notes.Where(n => n.Deleted), entireTrash: true);
+
+    public void ConfirmPermanentDeletion(IEnumerable<Note> notes) => ConfirmPermanentDeletion(notes, entireTrash: false);
+
+    private void ConfirmPermanentDeletion(IEnumerable<Note> notes, bool entireTrash)
     {
         var selected = notes.Where(n => n.Deleted).ToList();
         if (selected.Count == 0) return;
-        if (AppDialog.Show($"Supprimer définitivement {selected.Count} note(s) ?\n\nCette action est irréversible.",
-            "Suppression définitive", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        var countLabel = selected.Count == 1 ? "1 note" : $"{selected.Count} notes";
+        var message = entireTrash
+            ? (selected.Count == 1 ? "Supprimer définitivement la note de la corbeille ?" : $"Supprimer définitivement les {countLabel} de la corbeille ?")
+                + "\n\nToute la corbeille sera vidée, même si une recherche est active."
+            : selected.Count == 1 ? "Supprimer définitivement cette note ?" : $"Supprimer définitivement les {countLabel} sélectionnées ?";
+        var actionLabel = entireTrash ? $"Vider la corbeille ({countLabel})" : $"Supprimer {countLabel}";
+        if (AppDialog.Show(message + "\n\nCette action est irréversible.",
+            "Suppression définitive", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No, destructiveAction: actionLabel) != MessageBoxResult.Yes) return;
         PermanentlyDeleteNotes(selected);
         SaveNow();
     }

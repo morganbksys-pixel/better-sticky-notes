@@ -1,13 +1,12 @@
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Controls;
 
 namespace BetterStickyNotes;
 
 public static class NoteIcons
 {
-    public static TextBlock Glyph(string glyph) => new() { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 };
+    public static TextBlock Glyph(string glyph, double size = 14) => new() { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = size, VerticalAlignment = VerticalAlignment.Center };
     public static FrameworkElement? Action(string label)
     {
         if (label.StartsWith("Afficher", StringComparison.Ordinal)) return Glyph("\uE890");
@@ -27,13 +26,10 @@ public static class NoteIcons
             _ => null
         };
     }
-    public static Geometry Folder { get; } = Frozen("M2,4 L9,4 L12,7 L22,7 L22,20 L2,20 Z");
-    public static Geometry Pin { get; } = Frozen("M8,2 L16,2 L15,4 L15,9 L18,13 L18,15 L6,15 L6,13 L9,9 L9,4 Z M12,15 L12,22");
-
-    private static Geometry Frozen(string data) { var geometry = Geometry.Parse(data); geometry.Freeze(); return geometry; }
-    public static Path FolderIcon(string color) => new()
+    public static TextBlock FolderIcon(string color) => new()
     {
-        Data = Folder, Fill = (Brush)new BrushConverter().ConvertFromString(color)!,
-        Width = 16, Height = 14, Stretch = Stretch.Fill, VerticalAlignment = VerticalAlignment.Center
+        Text = "\uE8B7", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16,
+        Foreground = (Brush)new BrushConverter().ConvertFromString(color)!,
+        LayoutTransform = new RotateTransform(-90), VerticalAlignment = VerticalAlignment.Center
     };
 }

@@ -15,7 +15,8 @@ public partial class NotesWindow : Window
         public Note Note { get; } = note;
         public string Title => Note.DisplayTitle;
         public string Excerpt => Note.IsLocked ? "Contenu protégé" : Note.Text[..Math.Min(Note.Text.Length, 180)].Replace('\r', ' ').Replace('\n', ' ');
-        public string ProtectionMarker => Note.IsProtected && !Note.IsLocked ? "🔓" : "";
+        public string ProtectionMarker => !Note.IsProtected ? "" : Note.IsLocked ? "\uE72E" : "\uE785";
+        public string ProtectionState => Note.IsLocked ? "Note protégée verrouillée" : Note.IsProtected ? "Note protégée déverrouillée" : "";
         public string GroupLabel { get; set; } = "";
         public string Detail => GroupLabel.Length == 0 ? Excerpt : GroupLabel + " · " + Excerpt;
         public string VisibilityGlyph => Note.IsLocked ? "\uE72E" : Note.Hidden ? "\uED1A" : "\uE890";
@@ -54,6 +55,8 @@ public partial class NotesWindow : Window
         NoteList.ItemsSource = rows;
         NoteList.ContextMenu = new ContextMenu();
         GroupList.ContextMenu = new ContextMenu();
+        TrashButton.ContextMenu = new ContextMenu();
+        TrashButton.ContextMenuOpening += TrashContextOpening;
         UngroupedButton.ContextMenu = BuildGroupContextMenu(null);
         refresh.Tick += (_, _) => { refresh.Stop(); Refresh(); };
         app.NotesChanged += ScheduleRefresh;
@@ -105,6 +108,8 @@ public partial class NotesWindow : Window
         var count = NoteList.SelectedItems.Count;
         SelectionInfo.Text = $"{count} note(s) sélectionnée(s)";
         NewNoteButton.Visibility = InTrash ? Visibility.Collapsed : Visibility.Visible;
+        EmptyTrashButton.Visibility = InTrash ? Visibility.Visible : Visibility.Collapsed;
+        EmptyTrashButton.IsEnabled = app.Store.Notes.Any(n => n.Deleted);
         VisibilityColumn.Visibility = InTrash ? Visibility.Collapsed : Visibility.Visible;
     }
     private List<Note> Selected() => NoteList.SelectedItems.Cast<Row>().Where(r => r.Note.Deleted == InTrash).Select(r => r.Note).ToList();
@@ -154,7 +159,7 @@ public partial class NotesWindow : Window
     private void EmptyActionClick(object sender, RoutedEventArgs e) { if (SearchBox.Text.Length > 0) SearchBox.Clear(); else NewClick(sender, e); }
     private void RestoreClick(object sender, RoutedEventArgs e) { app.RestoreNotes(Selected()); Refresh([]); }
     private void PermanentDeleteClick(object sender, RoutedEventArgs e) { app.ConfirmPermanentDeletion(Selected()); Refresh([]); }
-    private void EmptyTrashClick(object sender, RoutedEventArgs e) { app.ConfirmPermanentDeletion(app.Store.Notes.Where(n => n.Deleted)); Refresh([]); }
+    private void EmptyTrashClick(object sender, RoutedEventArgs e) { app.ConfirmEmptyTrash(); Refresh(); }
     private void SearchChanged(object sender, TextChangedEventArgs e) { if (initialized) Refresh([]); }
     private void SelectAllClick(object sender, RoutedEventArgs e) { NoteList.SelectAll(); }
     private void ClearClick(object sender, RoutedEventArgs e) { NoteList.UnselectAll(); }
@@ -312,6 +317,25 @@ public partial class NotesWindow : Window
         return menu;
     }
 
+    public ContextMenu BuildTrashMenu()
+    {
+        var menu = new ContextMenu();
+        var empty = new MenuItem { Header = "Vider la corbeille…", Icon = NoteIcons.Action("Vider la corbeille…"), IsEnabled = app.Store.Notes.Any(n => n.Deleted) };
+        empty.Click += EmptyTrashClick;
+        menu.Items.Add(empty);
+        var purge = new MenuItem { Header = "Purge automatique…", Icon = NoteIcons.Action("Purge automatique…") };
+        purge.Click += (_, _) => { new PurgeSettingsDialog(this, app).ShowDialog(); Refresh(); };
+        menu.Items.Add(purge);
+        return menu;
+    }
+
+    private void TrashContextOpening(object sender, ContextMenuEventArgs e)
+    {
+        var source = BuildTrashMenu();
+        TrashButton.ContextMenu.Items.Clear();
+        while (source.Items.Count > 0) { var item = source.Items[0]; source.Items.RemoveAt(0); TrashButton.ContextMenu.Items.Add(item); }
+    }
+
     public ContextMenu BuildNotesMenu()
     {
         var menu = new ContextMenu();
@@ -324,7 +348,7 @@ public partial class NotesWindow : Window
         if (InTrash)
         {
             Add("Restaurer", () => app.RestoreNotes(selection), selection.Count > 0);
-            Add("Supprimer définitivement…", () => app.ConfirmPermanentDeletion(selection), selection.Count > 0);
+            Add("Supprimer définitivement la sélection…", () => app.ConfirmPermanentDeletion(selection), selection.Count > 0);
         }
         else
         {
@@ -340,12 +364,6 @@ public partial class NotesWindow : Window
         Add("Tout sélectionner", () => NoteList.SelectAll(), rows.Count > 0);
         Add("Désélectionner", () => NoteList.UnselectAll(), selection.Count > 0);
         Add("Verrouiller toutes les notes protégées", app.LockProtectedNotes, app.Store.Notes.Any(n => n.IsProtected && !n.IsLocked));
-        if (InTrash)
-        {
-            menu.Items.Add(new Separator());
-            Add("Vider la corbeille…", () => app.ConfirmPermanentDeletion(app.Store.Notes.Where(n => n.Deleted)), app.Store.Notes.Any(n => n.Deleted));
-            Add("Purge automatique…", () => new PurgeSettingsDialog(this, app).ShowDialog(), true);
-        }
         return menu;
     }
 

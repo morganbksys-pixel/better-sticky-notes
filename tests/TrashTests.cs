@@ -80,7 +80,51 @@ internal static class TrashTests
         Check(app.Store.TrashRetentionDays == 2 && app.Store.Notes.Contains(first), "Activation de purge depuis l’interface sans supprimer les notes récentes");
         enabled.IsChecked = false; apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(app.Store.TrashRetentionDays == null, "Désactivation de purge depuis l’interface");
-        settings.Close(); manager.Close(); app.PermanentlyDeleteNotes([first, second]); PerformanceChecks.Wait(app.SaveNowAsync());
+        settings.Close();
+        var emptyButton = (Button)manager.FindName("EmptyTrashButton");
+        Check(emptyButton.Visibility == Visibility.Visible && emptyButton.IsEnabled, "Vider visible sans sélection dans la corbeille");
+        Check(!manager.BuildNotesMenu().Items.OfType<MenuItem>().Any(i => Equals(i.Header, "Vider la corbeille…") || Equals(i.Header, "Purge automatique…")), "Menu de sélection sans actions globales de corbeille");
+        var pluralMessage = Confirm(() => app.ConfirmPermanentDeletion([first, second]), "Annuler", "Supprimer 2 notes");
+        Check(pluralMessage.Contains("les 2 notes sélectionnées"), "Suppression au pluriel");
+        search.Text = "Sélection un"; list.SelectAll();
+        var message = Confirm(() => emptyButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)), "Annuler", "Vider la corbeille (2 notes)");
+        Check(message.Contains("2 notes") && message.Contains("même si une recherche est active") && app.Store.Notes.Contains(first) && app.Store.Notes.Contains(second), "Vider : confirmation du total filtré et annulation sans suppression");
+        message = Confirm(() => manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Supprimer définitivement la sélection…")).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)), "Supprimer 1 note", "Supprimer 1 note");
+        Check(message.Contains("Supprimer définitivement cette note ?") && !app.Store.Notes.Contains(first) && app.Store.Notes.Contains(second), "Suppression définitive limitée à la sélection filtrée");
+        message = Confirm(app.ConfirmEmptyTrash, "Annuler", "Vider la corbeille (1 note)");
+        Check(message.Contains("la note de la corbeille") && app.Store.Notes.Contains(second), "Vidage au singulier et annulation");
+        var secret = new Note { Title = "Secret", Deleted = true, Hidden = true };
+        var key = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        NoteProtection.Protect(secret, key, Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)));
+        NoteProtection.Lock(secret); System.Security.Cryptography.CryptographicOperations.ZeroMemory(key);
+        var kept = new Note { Title = "À conserver", Hidden = true };
+        app.Store.Notes.AddRange([secret, kept]);
+        manager.SelectView("all"); list.SelectAll();
+        Check(emptyButton.Visibility == Visibility.Collapsed && ((Button)manager.FindName("TrashButton")).ContextMenu != null, "Menu corbeille disponible hors de sa vue et bouton masqué");
+        message = Confirm(() => manager.BuildTrashMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Vider la corbeille…")).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)), "Vider la corbeille (2 notes)", "Vider la corbeille (2 notes)");
+        Check(message.Contains("2 notes") && !message.Contains("Secret") && !app.Store.Notes.Contains(second) && !app.Store.Notes.Contains(secret) && app.Store.Notes.Contains(kept), "Vider depuis une autre vue inclut les notes verrouillées et préserve les notes actives");
+        Check(list.SelectedItems.Count == 1, "Vider la corbeille préserve la sélection active");
+        manager.SelectView("trash");
+        Check(!emptyButton.IsEnabled && !manager.BuildTrashMenu().Items.OfType<MenuItem>().First().IsEnabled && manager.BuildTrashMenu().Items.OfType<MenuItem>().Last().IsEnabled, "Corbeille vide : vidage désactivé et purge accessible");
+        manager.Close(); app.Store.Notes.Remove(kept); PerformanceChecks.Wait(app.SaveNowAsync());
+    }
+    private static string Confirm(Action action, string answer, string expectedAction)
+    {
+        var message = "";
+        var safeButtons = false;
+        Application.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, new Action(() =>
+        {
+            var dialog = Application.Current.Windows.OfType<Window>().Single(w => w.Title == "Suppression définitive");
+            var buttons = Descendants(dialog).OfType<Button>().ToList();
+            var cancel = buttons.Single(b => Equals(b.Content, "Annuler"));
+            var confirm = buttons.Single(b => Equals(b.Content, expectedAction));
+            safeButtons = cancel.IsDefault && cancel.IsCancel && !confirm.IsDefault && confirm.Background is SolidColorBrush background && background.Color == Color.FromRgb(180, 35, 24) && confirm.Foreground == Brushes.White;
+            message = string.Join(" ", Descendants(dialog).OfType<TextBlock>().Select(t => t.Text));
+            Descendants(dialog).OfType<Button>().Single(b => Equals(b.Content, answer)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        }));
+        action();
+        Check(safeButtons && !message.Contains("note(s)"), "Confirmation : action chiffrée rouge, annulation par défaut et texte accordé");
+        return message;
     }
     private static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
     {

@@ -9,7 +9,7 @@
             <Border Background="#0C000000" CornerRadius="13,13,0,0" MouseLeftButtonDown="DragHeader" ToolTip="Déplacer la note par le bandeau">
                 <Grid Margin="8,0,8,0">
                     <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                    <TextBlock Text="⠿" Opacity="0.35" VerticalAlignment="Center" Cursor="SizeAll" ToolTip="Glisser pour déplacer la note"/>
+                    <TextBlock Text="&#xE784;" FontFamily="Segoe MDL2 Assets" Opacity="0.35" VerticalAlignment="Center" Cursor="SizeAll" ToolTip="Glisser pour déplacer la note"/>
                     <Grid Grid.Column="1" VerticalAlignment="Center">
                         <TextBox x:Name="TitleBox" Visibility="Collapsed" KeyDown="TitleKeyDown" LostKeyboardFocus="TitleLostFocus" Padding="0,4" Background="#55FFFFFF" BorderThickness="0" FontSize="14" FontWeight="SemiBold" MaxLength="120" ToolTip="Entrée pour terminer" AutomationProperties.Name="Titre de la note"/>
                         <TextBlock x:Name="TitleDisplay" Margin="2,4,0,4" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MouseLeftButtonDown="TitleDoubleClick" ToolTip="Glisser pour déplacer · Double-clic pour renommer">
@@ -17,10 +17,10 @@
                         </TextBlock>
                     </Grid>
                     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="⋯" Click="OpenMenu" Width="32" Height="30" Padding="0" FontSize="20" Background="Transparent" ToolTip="Options de la note" AutomationProperties.Name="Options de la note"/>
+                        <Button Content="&#xE712;" FontFamily="Segoe MDL2 Assets" Click="OpenMenu" Width="32" Height="30" Padding="0" FontSize="16" Background="Transparent" ToolTip="Options de la note" AutomationProperties.Name="Options de la note"/>
                         <Button x:Name="PinButton" Click="TogglePin" Width="32" Height="30" Padding="0" ToolTip="Épingler au premier plan" AutomationProperties.Name="Épingler au premier plan"/>
                         <Button x:Name="HideButton" Click="HideClick" Width="32" Height="30" Padding="0" Background="Transparent" ToolTip="Fermer la note — disponible dans Mes notes" AutomationProperties.Name="Fermer la note">
-                            <Viewbox Width="19" Height="19"><Canvas Width="24" Height="24"><Path Data="M6,6 L18,18 M18,6 L6,18" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/></Canvas></Viewbox>
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
                         </Button>
                     </StackPanel>
                 </Grid>
