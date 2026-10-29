@@ -36,7 +36,7 @@ public partial class App
         if (!note.IsLocked) return true;
         var key = RequestProtectionKey(note, out _);
         if (key == null) return false;
-        try { NoteProtection.Unlock(note, key); return true; }
+        try { NoteProtection.Unlock(note, key); notesWindow?.RefreshPrivacy(); return true; }
         finally { CryptographicOperations.ZeroMemory(key); }
     }
 
@@ -82,7 +82,7 @@ public partial class App
     {
         var selected = notes.Where(n => n.Deleted).ToList();
         if (selected.Count == 0) return;
-        if (MessageBox.Show($"Supprimer définitivement {selected.Count} note(s) ?\n\nCette action est irréversible.",
+        if (AppDialog.Show($"Supprimer définitivement {selected.Count} note(s) ?\n\nCette action est irréversible.",
             "Suppression définitive", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
         PermanentlyDeleteNotes(selected);
         SaveNow();

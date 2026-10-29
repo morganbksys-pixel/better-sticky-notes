@@ -10,7 +10,7 @@ public static class NoteManagement
         query = query.Trim();
         var compare = CultureInfo.GetCultureInfo("fr-FR").CompareInfo;
         const CompareOptions options = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
-        return note.Deleted == deleted && (query.Length == 0 || !note.IsProtected && (compare.IndexOf(note.Title, query, options) >= 0 || compare.IndexOf(note.Text, query, options) >= 0));
+        return note.Deleted == deleted && (query.Length == 0 || !note.IsLocked && (compare.IndexOf(note.Title, query, options) >= 0 || compare.IndexOf(note.Text, query, options) >= 0));
     }
     // Coordinates and dimensions are all physical pixels; no mixed-monitor DPI conversion.
     public static Point Cascade(Rect area, Size size, int index, double step = 48)

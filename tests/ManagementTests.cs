@@ -25,26 +25,25 @@ internal static class ManagementTests
         Check(notes[0].Deleted && notes[0].Hidden && !notes[1].Deleted, "Actions groupées limitées aux notes ciblées");
         var loaded = new NoteStore(Path.Combine(folder, "app")); loaded.Load();
         Check(loaded.Notes.Single(n => n.Id == notes[0].Id).Deleted, "Suppression vers la corbeille persistée");
-        var tabs = (TabControl)manager.FindName("NoteTabs");
-        tabs.SelectedIndex = 1;
+        manager.SelectView("trash");
         Check(list.Items.Count == 2 && list.Items.Cast<NotesWindow.Row>().All(r => r.Note.Deleted) && list.SelectedItems.Count == 0, "Onglet corbeille : uniquement les notes supprimées, sélection remise à zéro");
-        Check(((Button)manager.FindName("EmptyTrashButton")).IsEnabled && !((Button)manager.FindName("RestoreButton")).IsEnabled,
+        Check(manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Vider la corbeille…")).IsEnabled && !manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Restaurer")).IsEnabled,
             "Vider la corbeille disponible sans sélection, restaurer désactivé");
         ((TextBox)manager.FindName("SearchBox")).Text = "ancienne";
         Check(list.Items.Count == 1, "Recherche limitée à la corbeille");
         list.SelectedItem = list.Items[0];
-        ((Button)manager.FindName("RestoreButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        manager.BuildNotesMenu().Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Restaurer")).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         Check(!notes[2].Deleted && notes[2].Hidden && list.Items.Count == 0, "Restauration depuis l’onglet sans ouvrir la note");
-        tabs.SelectedIndex = 0;
+        manager.SelectView("all");
         Check(list.Items.Count == 2 && list.SelectedItems.Count == 0, "Retour aux notes actives : recherche et sélection réinitialisées");
         var secret = new Note { Title = "Confidentiel", Text = "Secret introuvable" };
         var key = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
         NoteProtection.Protect(secret, key, Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)));
         var secretRow = new NotesWindow.Row(secret);
-        Check(!secret.IsLocked && secretRow.Title == "Note protégée 🔒" && secretRow.Excerpt == "Contenu protégé" && !NoteManagement.Matches(secret, "secret"),
-            "Note protégée déverrouillée : titre, extrait et recherche anonymisés");
+        Check(!secret.IsLocked && secretRow.Title == "Confidentiel" && secretRow.Excerpt == "Secret introuvable" && NoteManagement.Matches(secret, "secret"),
+            "Note protégée déverrouillée : titre, extrait et recherche disponibles");
         secret.Deleted = true;
-        Check(NoteManagement.Matches(secret, "", true) && !NoteManagement.Matches(secret, "confidentiel", true), "Anonymisation également dans la recherche de la corbeille");
+        Check(NoteManagement.Matches(secret, "", true) && NoteManagement.Matches(secret, "confidentiel", true), "Note déverrouillée recherchable dans la corbeille");
         NoteProtection.Lock(secret); System.Security.Cryptography.CryptographicOperations.ZeroMemory(key);
         manager.Close(); app.Store.Notes.Clear();
         foreach (var area in new[] { new Rect(0, 0, 1920, 1040), new Rect(-2560, 0, 2560, 1400), new Rect(0, 0, 800, 600) })

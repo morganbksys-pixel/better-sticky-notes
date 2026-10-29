@@ -19,6 +19,7 @@ public partial class NoteWindow : Window
     private bool clearingSensitiveContent;
     private bool allowClose;
     private bool draggingHeader;
+    private string? titleBeforeEdit;
     private readonly List<(Button Button, MarkdownTool Tool, string Label)> editingButtons = [];
     private Button overflowButton = null!;
     private System.Windows.Controls.Primitives.Popup? markdownHelp;
@@ -49,7 +50,8 @@ public partial class NoteWindow : Window
         Closing += OnClosing;
         PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == Key.F2) { BeginTitleEdit(); e.Handled = true; return; }
+            if (e.Key == Key.F2 && Keyboard.Modifiers == ModifierKeys.None) { if (!e.IsRepeat) BeginTitleEdit(); e.Handled = true; return; }
+            if (e.Key == Key.Escape && TitleBox.Visibility == Visibility.Visible) { CancelTitleEdit(); e.Handled = true; return; }
             if (Keyboard.Modifiers != ModifierKeys.Control) return;
             if (!note.Preview && Editor.IsKeyboardFocusWithin && e.Key is Key.B or Key.I or Key.K)
             {
@@ -57,7 +59,7 @@ public partial class NoteWindow : Window
                 e.Handled = true; return;
             }
             if (e.Key == Key.Enter) { TogglePreview(this, new RoutedEventArgs()); e.Handled = true; }
-            else if (e.Key == Key.N) { app.NewNote(); e.Handled = true; }
+            else if (e.Key == Key.N) { if (!e.IsRepeat) NewNote(this, e); e.Handled = true; }
             else if (e.Key == Key.S) { _ = app.SaveNowAsync(); e.Handled = true; }
         };
     }
@@ -102,12 +104,15 @@ public partial class NoteWindow : Window
     private void ClipSurface(object sender, SizeChangedEventArgs e) => ((UIElement)sender).Clip = new RectangleGeometry(new Rect(e.NewSize), 13, 13);
     private void BeginTitleEdit()
     {
+        if (TitleBox.Visibility == Visibility.Visible) return;
+        titleBeforeEdit = note.Title;
         TitleDisplay.Visibility = Visibility.Collapsed;
         TitleBox.Visibility = Visibility.Visible;
         TitleBox.Focus(); TitleBox.SelectAll();
     }
     private void EndTitleEdit()
     {
+        titleBeforeEdit = null;
         TitleBox.Visibility = Visibility.Collapsed;
         TitleDisplay.Visibility = Visibility.Visible;
     }
@@ -117,8 +122,11 @@ public partial class NoteWindow : Window
     }
     private void TitleKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key is Key.Enter or Key.Escape) { EndTitleEdit(); e.Handled = true; }
+        if (e.Key == Key.Escape) { CancelTitleEdit(); e.Handled = true; }
+        else if (e.Key == Key.Enter) { EndTitleEdit(); e.Handled = true; }
     }
+    private void CancelTitleEdit() { if (titleBeforeEdit != null) SetTitle(titleBeforeEdit); EndTitleEdit(); }
+    public void SetTitle(string title) { TitleBox.Text = title; }
     private void TitleLostFocus(object sender, KeyboardFocusChangedEventArgs e) => EndTitleEdit();
     private void ApplyPin()
     {
@@ -132,7 +140,8 @@ public partial class NoteWindow : Window
             {
                 Width = 24, Height = 24,
                 Children = { new System.Windows.Shapes.Path {
-                    Data = Geometry.Parse("M8,2 L16,2 M9,2 L9,9 L6,13 L6,15 L18,15 L18,13 L15,9 L15,2 M12,15 L12,22"),
+                    Data = NoteIcons.Pin,
+                    Fill = note.Pinned ? Foreground : Brushes.Transparent,
                     Stroke = Foreground, StrokeThickness = 1.7,
                     StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round
                 } }
@@ -145,7 +154,7 @@ public partial class NoteWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(PinButton, action);
     }
     private void TogglePin(object sender, RoutedEventArgs e) { note.Pinned = !note.Pinned; ApplyPin(); app.Changed(); }
-    private void NewNote(object sender, RoutedEventArgs e) => app.NewNote();
+    private void NewNote(object sender, RoutedEventArgs e) => app.NewNote(groupId: note.GroupId);
     private void HideClick(object sender, RoutedEventArgs e) => HideNote();
     private void DeleteClick(object sender, RoutedEventArgs e) => app.Delete(note);
     public void ClearSensitiveContent()
@@ -266,6 +275,7 @@ public partial class NoteWindow : Window
             item.Click += (_, _) => { ApplyColor(color); app.Changed(); }; colors.Items.Add(item);
         }
         menu.Items.Add(colors);
+        menu.Items.Add(app.BuildGroupMenu([note]));
         var protect = new MenuItem { Header = note.IsProtected ? "Verrouiller" : "Protéger par mot de passe…", Icon = MenuIcon("\uE72E") };
         protect.Click += (_, _) => { if (note.IsProtected) app.LockNote(note); else app.ProtectNote(note); };
         menu.Items.Add(protect);
@@ -280,7 +290,7 @@ public partial class NoteWindow : Window
         menu.Closed += (_, _) => ScheduleInactivePreview();
         menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
     }
-    private static TextBlock MenuIcon(string glyph) => new() { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 };
+    private static TextBlock MenuIcon(string glyph) => NoteIcons.Glyph(glyph);
     private void BuildEditingBar()
     {
         foreach (var (tool, glyph, label) in new[] {

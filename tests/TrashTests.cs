@@ -69,17 +69,18 @@ internal static class TrashTests
         list.Focus(); list.SelectAll();
         list.RaiseEvent(DeleteKey(list));
         Check(first.Deleted && second.Deleted && first.DeletedAtUtc != null && list.Items.Count == 0, "Suppr dans la liste : sélection envoyée à la corbeille sans confirmation");
-        ((TabControl)manager.FindName("NoteTabs")).SelectedIndex = 1;
-        var enabled = (CheckBox)manager.FindName("AutoPurge");
-        var days = (TextBox)manager.FindName("PurgeDays");
-        var apply = Descendants((StackPanel)manager.FindName("PurgeSettings")).OfType<Button>().Single();
+        manager.SelectView("trash");
+        var settings = new PurgeSettingsDialog(manager, app);
+        var enabled = (CheckBox)settings.FindName("AutoPurge");
+        var days = (TextBox)settings.FindName("PurgeDays");
+        var apply = (Button)settings.FindName("ApplyButton");
         enabled.IsChecked = true; days.Text = "0"; apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(app.Store.TrashRetentionDays == null, "Réglage de purge invalide refusé");
         days.Text = "2"; apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(app.Store.TrashRetentionDays == 2 && app.Store.Notes.Contains(first), "Activation de purge depuis l’interface sans supprimer les notes récentes");
         enabled.IsChecked = false; apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(app.Store.TrashRetentionDays == null, "Désactivation de purge depuis l’interface");
-        manager.Close(); app.PermanentlyDeleteNotes([first, second]); PerformanceChecks.Wait(app.SaveNowAsync());
+        settings.Close(); manager.Close(); app.PermanentlyDeleteNotes([first, second]); PerformanceChecks.Wait(app.SaveNowAsync());
     }
     private static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
     {

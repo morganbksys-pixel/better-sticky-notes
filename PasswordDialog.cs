@@ -5,6 +5,7 @@ namespace BetterStickyNotes;
 
 public sealed class PasswordDialog : Window
 {
+    private const int MinimumPasswordLength = 8;
     public static byte[]? Request(bool create, Func<string, byte[]> validate)
     {
         byte[]? key = null;
@@ -13,7 +14,7 @@ public sealed class PasswordDialog : Window
             ShowInTaskbar = false, Topmost = true };
         var panel = new StackPanel { Margin = new Thickness(22) };
         panel.Children.Add(new TextBlock { Text = create
-            ? "Choisissez un mot de passe commun aux notes protégées (12 caractères minimum). En cas d’oubli, leur contenu ne pourra pas être récupéré."
+            ? $"Choisissez un mot de passe commun aux notes protégées ({MinimumPasswordLength} caractères minimum). En cas d’oubli, leur contenu ne pourra pas être récupéré."
             : "Saisissez le mot de passe commun aux notes protégées.", TextWrapping = TextWrapping.Wrap });
         var password = new PasswordBox { Margin = new Thickness(0, 14, 0, 10) };
         System.Windows.Automation.AutomationProperties.SetName(password, "Mot de passe");
@@ -31,13 +32,13 @@ public sealed class PasswordDialog : Window
         var ok = new Button { Content = create ? "Protéger" : "Valider", IsDefault = true, Padding = new Thickness(12, 6, 12, 6) };
         ok.Click += (_, _) =>
         {
-            if (create && password.Password.Length < 12) { error.Text = "Utilisez au moins 12 caractères."; return; }
+            if (create && password.Password.Length < MinimumPasswordLength) { error.Text = $"Utilisez au moins {MinimumPasswordLength} caractères."; return; }
             if (create && password.Password != confirm.Password) { error.Text = "Les mots de passe ne correspondent pas."; return; }
             try { key = validate(password.Password); dialog.DialogResult = true; }
             catch (Exception ex) when (ex is System.Security.Cryptography.CryptographicException or FormatException or System.Text.Json.JsonException or ArgumentException)
             { error.Text = "Mot de passe incorrect ou données protégées endommagées."; password.SelectAll(); password.Focus(); }
         };
-        buttons.Children.Add(cancel); buttons.Children.Add(ok); panel.Children.Add(buttons); dialog.Content = panel;
+        buttons.Children.Add(cancel); buttons.Children.Add(ok); panel.Children.Add(buttons); dialog.Content = panel; WindowAppearance.Apply(dialog);
         dialog.Loaded += (_, _) => password.Focus();
         dialog.ShowDialog(); password.Clear(); confirm.Clear();
         return key;

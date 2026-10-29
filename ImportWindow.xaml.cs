@@ -9,7 +9,7 @@ public partial class ImportWindow : Window
     private bool saving;
     public ImportWindow(StickyImportResult result, Func<List<Note>, Task<bool>> import)
     {
-        InitializeComponent();
+        InitializeComponent(); WindowAppearance.Apply(this);
         this.import = import;
         rows = result.Notes.Select(n => new Row(n)).ToList();
         NoteList.ItemsSource = rows;
@@ -20,7 +20,7 @@ public partial class ImportWindow : Window
     private async void ImportClick(object sender, RoutedEventArgs e)
     {
         var selected = rows.Where(r => r.Selected).Select(r => r.Note).ToList();
-        if (selected.Count == 0) { System.Windows.MessageBox.Show(this, "Sélectionnez au moins une note.", "Import Sticky Notes"); return; }
+        if (selected.Count == 0) { AppDialog.Show(this, "Sélectionnez au moins une note.", "Import Sticky Notes"); return; }
         saving = true; ImportButton.IsEnabled = false;
         bool success;
         try { success = await import(selected); }

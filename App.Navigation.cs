@@ -29,7 +29,7 @@ public partial class App
                 key.SetValue("BetterStickyNotes", StartupCommand(Environment.ProcessPath!));
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or System.Security.SecurityException)
-        { MessageBox.Show("Impossible de mettre à jour le démarrage discret avec Windows.\n" + ex.Message, "Better Sticky Notes"); }
+        { AppDialog.Show("Impossible de mettre à jour le démarrage discret avec Windows.\n" + ex.Message, "Better Sticky Notes"); }
     }
 
     public void PrepareLaunch(bool background)

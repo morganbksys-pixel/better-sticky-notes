@@ -9,6 +9,24 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        if (args.FirstOrDefault() == "--quiet-ui")
+        {
+            var data = Path.Combine(Path.GetTempPath(), "BetterStickyNotes-quiet-" + Guid.NewGuid());
+            var quietApp = new App(false, data); quietApp.InitializeComponent(); quietApp.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try
+            {
+                ContextMenuTests.Run(quietApp, data);
+                GroupContextTests.Run(quietApp);
+                ManagementLayoutTests.Run(quietApp);
+                PresentationTests.Run(quietApp, data);
+                UiPolishTests.Run(quietApp);
+                HomeTests.Run(quietApp);
+                quietApp.Store.Save();
+                Console.WriteLine("Vérifications sans affichage réussies. Aucun Show, ShowDialog ou Activate.");
+            }
+            finally { quietApp.Shutdown(); if (Directory.Exists(data)) Directory.Delete(data, true); }
+            return;
+        }
         if (args.FirstOrDefault() == "--benchmark") { PerformanceChecks.Run(int.Parse(args[1])); return; }
         if (args.FirstOrDefault() == "--inspect-import")
         {
@@ -40,6 +58,8 @@ internal static class Program
             Assert(inlines.OfType<Hyperlink>().Count() == 1, "Seuls les protocoles de liens autorisés sont cliquables");
             var app = new App(startNormally: false, dataFolder: Path.Combine(folder, "app")); app.InitializeComponent(); app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             ManagementTests.Run(app, folder);
+            GroupTests.Run(app, folder);
+            ManagementLayoutTests.Run(app);
             NavigationTests.Run(app);
             TrashTests.Run(app, folder);
             OptimizationTests.Run(app, folder);
@@ -48,8 +68,7 @@ internal static class Program
             EditingTests.Run();
             ImportTests.Run(folder);
             var trayMenu = app.BuildTrayMenu();
-            Assert(trayMenu.Items.OfType<MenuItem>().Count() == 7, "Menu système : essentiels, verrouillage et À propos");
-            Assert(trayMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Options")).Items.OfType<MenuItem>().Count() == 4, "Import, corbeille et réglages disponibles dans Options");
+            Assert(trayMenu.Items.OfType<MenuItem>().Select(i => i.Header.ToString()).SequenceEqual(new[] { "Nouvelle note", "Mes notes", "Quitter" }), "Menu système minimal");
             var window = new NoteWindow(app, new Note { Title = "Mes idées du jour", Text = markdown, Preview = true, Pinned = true });
             window.Opacity = 0; window.ShowActivated = false; window.Show();
             var handle = new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle();
@@ -128,7 +147,7 @@ internal static class Program
                 var notesImage = new System.Windows.Media.Imaging.RenderTargetBitmap(900, 580, 96, 96, System.Windows.Media.PixelFormats.Pbgra32); notesImage.Render(notesContent);
                 var notesPng = new System.Windows.Media.Imaging.PngBitmapEncoder(); notesPng.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(notesImage));
                 using var notesOutput = File.Create(Path.Combine(Path.GetDirectoryName(args[0])!, "notes-preview.png")); notesPng.Save(notesOutput);
-                ((TabControl)notesWindow.FindName("NoteTabs")).SelectedIndex = 1;
+                notesWindow.SelectView("trash");
                 notesContent.UpdateLayout();
                 var trashImage = new System.Windows.Media.Imaging.RenderTargetBitmap(900, 580, 96, 96, System.Windows.Media.PixelFormats.Pbgra32); trashImage.Render(notesContent);
                 var trashPng = new System.Windows.Media.Imaging.PngBitmapEncoder(); trashPng.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(trashImage));

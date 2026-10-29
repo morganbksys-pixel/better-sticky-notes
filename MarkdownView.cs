@@ -83,7 +83,7 @@ public static class MarkdownView
                     {
                         var anchor = new Hyperlink { NavigateUri = uri };
                         AddInlines(anchor.Inlines, link, text, toggle);
-                        anchor.RequestNavigate += (_, args) => { try { Process.Start(new ProcessStartInfo(args.Uri.AbsoluteUri) { UseShellExecute = true }); } catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Impossible d’ouvrir le lien"); } args.Handled = true; };
+                        anchor.RequestNavigate += (_, args) => { try { Process.Start(new ProcessStartInfo(args.Uri.AbsoluteUri) { UseShellExecute = true }); } catch (Exception ex) { AppDialog.Show(ex.Message, "Impossible d’ouvrir le lien"); } args.Handled = true; };
                         target.Add(anchor);
                     }
                     else AddInlines(target, link, text, toggle);

@@ -7,6 +7,7 @@ namespace BetterStickyNotes;
 public sealed class Note
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid? GroupId { get; set; }
     public string Title { get; set; } = "";
     public string Text { get; set; } = "";
     public string Color { get; set; } = "#FFF1A8";
@@ -38,6 +39,11 @@ public sealed class Note
     }
 }
 
+public sealed record NoteGroup(Guid Id, string Name, string Color = "#73777E")
+{
+    public static bool IsValidColor(string? color) => color is { Length: 7 } && color[0] == '#' && color.Skip(1).All(Uri.IsHexDigit);
+}
+
 public sealed class NoteStore
 {
     public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterStickyNotes");
@@ -48,6 +54,8 @@ public sealed class NoteStore
     public bool SanitizeBackup { get; set; }
     public NoteStore(string? folder = null) => path = Path.Combine(folder ?? Folder, "notes.json");
     public List<Note> Notes { get; private set; } = [];
+    public List<NoteGroup> Groups { get; private set; } = [];
+    private sealed record Document(int Version, List<Note> Notes, List<NoteGroup> Groups);
     public string? LoadWarning { get; private set; }
     public int? TrashRetentionDays { get; private set; }
     private string SettingsPath => Path.Combine(Path.GetDirectoryName(path)!, "settings.json");
@@ -75,13 +83,13 @@ public sealed class NoteStore
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         { LoadWarning = "Réglage de purge illisible : la purge automatique est désactivée."; }
         if (!File.Exists(path)) return;
-        try { Notes = Read(path); }
+        try { Apply(Read(path)); }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             // Never overwrite the only surviving copy when recovery fails.
             var backup = path + ".bak";
             if (!File.Exists(backup)) throw new IOException("Impossible de lire les notes. Le fichier original a été conservé : " + path, ex);
-            Notes = Read(backup);
+            Apply(Read(backup));
             File.Copy(path, path + ".damaged-" + DateTime.Now.ToString("yyyyMMddHHmmss"), true);
             File.Copy(backup, path, true);
             LoadWarning = "Les notes ont été récupérées depuis la sauvegarde précédente.";
@@ -89,6 +97,7 @@ public sealed class NoteStore
         var migrated = false;
         foreach (var n in Notes)
         {
+            if (n.GroupId != null && !Groups.Any(g => g.Id == n.GroupId)) { n.GroupId = null; migrated = true; }
             if (n.Deleted && n.DeletedAtUtc == null) { n.DeletedAtUtc = DateTimeOffset.UtcNow; migrated = true; }
             if (!n.Deleted) n.DeletedAtUtc = null;
             if (n.IsProtected) { n.Title = ""; n.Text = ""; n.Hidden = true; }
@@ -102,17 +111,40 @@ public sealed class NoteStore
         }
         if (migrated) Save();
     }
-    private static List<Note> Read(string file) => JsonSerializer.Deserialize<List<Note>>(File.ReadAllText(file)) ?? throw new JsonException("Fichier vide.");
+    private void Apply(Document document)
+    {
+        Notes = document.Notes;
+        Groups = document.Groups.Select(g => NoteGroup.IsValidColor(g.Color) ? g : g with { Color = "#73777E" }).ToList();
+    }
+    private static Document Read(string file)
+    {
+        using var json = JsonDocument.Parse(File.ReadAllText(file));
+        if (json.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            var notes = json.RootElement.Deserialize<List<Note>>() ?? throw new JsonException("Fichier vide.");
+            if (notes.Any(n => n == null)) throw new JsonException("Note invalide.");
+            return new Document(1, notes, []);
+        }
+        if (json.RootElement.ValueKind != JsonValueKind.Object || !json.RootElement.TryGetProperty("Version", out _))
+            throw new JsonException("Format de notes invalide.");
+        var document = json.RootElement.Deserialize<Document>() ?? throw new JsonException("Fichier vide.");
+        if (document.Version != 1) throw new NotSupportedException("Version du fichier de notes non prise en charge : " + document.Version);
+        if (document.Notes == null || document.Groups == null || document.Notes.Any(n => n == null) ||
+            document.Groups.Any(g => g == null || g.Id == Guid.Empty || string.IsNullOrWhiteSpace(g.Name)) ||
+            document.Groups.Select(g => g.Id).Distinct().Count() != document.Groups.Count)
+            throw new JsonException("Structure des notes ou groupes invalide.");
+        return document;
+    }
     public Task SaveAsync()
     {
         // Capture immutable values on the UI thread, serialize and write on a worker.
-        var snapshot = Notes.Select(n => n.Snapshot()).ToList();
-        var sanitize = SanitizeBackup || snapshot.Any(n => n.IsProtected);
+        var snapshot = new Document(1, Notes.Select(n => n.Snapshot()).ToList(), Groups.ToList());
+        var sanitize = SanitizeBackup || snapshot.Notes.Any(n => n.IsProtected);
         lock (writeLock)
             return writeTail = writeTail.ContinueWith(_ => Write(snapshot, sanitize), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
     public void Save() => SaveAsync().GetAwaiter().GetResult();
-    private void Write(List<Note> snapshot, bool sanitize)
+    private void Write(Document snapshot, bool sanitize)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";

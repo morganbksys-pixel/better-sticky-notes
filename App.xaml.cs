@@ -64,7 +64,7 @@ public partial class App : System.Windows.Application
             Shutdown(); return;
         }
         try { Store.Load(); }
-        catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Chargement impossible", MessageBoxButton.OK, MessageBoxImage.Error); Shutdown(); return; }
+        catch (Exception ex) { AppDialog.Show(ex.Message, "Chargement impossible", MessageBoxButton.OK, MessageBoxImage.Error); Shutdown(); return; }
         RunTrashPurge();
         purgeTimer.Tick += (_, _) => RunTrashPurge(); purgeTimer.Start();
         activationWait = ThreadPool.RegisterWaitForSingleObject(activation, (_, _) => {
@@ -76,7 +76,7 @@ public partial class App : System.Windows.Application
         tray.MouseUp += (_, args) => { if (args.Button == Forms.MouseButtons.Right) ShowTrayMenu(); };
         UpgradeStartupRegistration();
         PrepareLaunch(background);
-        if (Store.LoadWarning is not null) System.Windows.MessageBox.Show(Store.LoadWarning, "Récupération des notes");
+        if (Store.LoadWarning is not null) AppDialog.Show(Store.LoadWarning, "Récupération des notes");
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
         SystemEvents.SessionSwitch += SessionChanged;
         SessionEnding += (_, e) => { quitting = true; if (!SaveNow()) { e.Cancel = true; quitting = false; } };
@@ -116,13 +116,13 @@ public partial class App : System.Windows.Application
     }
     private void ReportSaveError(Exception ex)
     {
-        if (!saveErrorShown) System.Windows.MessageBox.Show("Les modifications restent en mémoire mais n’ont pas pu être enregistrées.\n\n" + ex.Message, "Sauvegarde impossible", MessageBoxButton.OK, MessageBoxImage.Error);
+        if (!saveErrorShown) AppDialog.Show("Les modifications restent en mémoire mais n’ont pas pu être enregistrées.\n\n" + ex.Message, "Sauvegarde impossible", MessageBoxButton.OK, MessageBoxImage.Error);
         saveErrorShown = true;
         saveTimer.Interval = TimeSpan.FromSeconds(5); saveTimer.Start();
     }
-    public void NewNote(string title = "", string text = "")
+    public void NewNote(string title = "", string text = "", Guid? groupId = null)
     {
-        var note = new Note { Title = title, Text = text };
+        var note = new Note { Title = title, Text = text, GroupId = Store.Groups.Any(g => g.Id == groupId) ? groupId : null };
         Store.Notes.Add(note); Open(note);
         Changed();
     }
@@ -258,43 +258,13 @@ public partial class App : System.Windows.Application
     {
         var menu = new ContextMenu();
         menu.Items.Add(ActionItem("Nouvelle note", "\uE710", () => NewNote()));
-        var visible = windows.Values.Any(w => w.IsVisible);
-        menu.Items.Add(ActionItem(visible ? "Masquer les notes" : "Afficher les notes", "\uE890", () => { if (visible) HideAll(); else ShowAll(); }));
         menu.Items.Add(ActionItem("Mes notes", "\uE8A5", () => ShowManager()));
-        menu.Items.Add(ActionItem("Verrouiller toutes les notes protégées", "\uE72E", LockProtectedNotes));
         menu.Items.Add(new Separator());
-        var more = new MenuItem { Header = "Options", Icon = Glyph("\uE713") };
-        var import = ActionItem("Importer depuis Sticky Notes…", "\uE8B5", ImportStickyNotes);
-        import.IsEnabled = !importing; more.Items.Add(import);
-        var trash = new MenuItem { Header = "Corbeille", Icon = Glyph("\uE74D") };
-        foreach (var note in Store.Notes.Where(n => n.Deleted))
-        {
-            var entry = new MenuItem { Header = Label(note) };
-            entry.Items.Add(ActionItem("Restaurer", "\uE777", () => {
-                RestoreNotes([note]); ShowManager([note.Id]);
-            }));
-            entry.Items.Add(ActionItem("Supprimer définitivement…", "\uE74D", () => ConfirmPermanentDeletion([note])));
-            trash.Items.Add(entry);
-        }
-        trash.IsEnabled = trash.Items.Count > 0;
-        if (trash.IsEnabled)
-        {
-            trash.Items.Add(new Separator());
-            trash.Items.Add(ActionItem("Vider la corbeille…", "\uE74D", () => ConfirmPermanentDeletion(Store.Notes.Where(n => n.Deleted))));
-        }
-        more.Items.Add(trash);
-        more.Items.Add(new Separator());
-        var startup = ActionItem("Démarrer avec Windows", "\uE7E8", ToggleStartup);
-        startup.IsCheckable = true; startup.IsChecked = IsStartupEnabled(); more.Items.Add(startup);
-        more.Items.Add(ActionItem("Ouvrir le dossier des données", "\uE8B7", () => { Directory.CreateDirectory(NoteStore.Folder); Process.Start(new ProcessStartInfo(NoteStore.Folder) { UseShellExecute = true }); }));
-        menu.Items.Add(more);
-        menu.Items.Add(ActionItem($"À propos — v{AppInfo.Version}", "\uE946", () =>
-            System.Windows.MessageBox.Show($"{AppInfo.DisplayName}\n\nExécutable actif :\n{AppInfo.ExecutablePath}", "À propos de Better Sticky Notes", MessageBoxButton.OK, MessageBoxImage.Information)));
         menu.Items.Add(ActionItem("Quitter", "\uE7E8", Quit));
         return menu;
     }
     private static TextBlock Glyph(string glyph) => new() { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 };
-    private async void ImportStickyNotes()
+    public async void ImportStickyNotes()
     {
         if (importing) return;
         importing = true;
@@ -331,7 +301,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or IOException or UnauthorizedAccessException)
         {
-            System.Windows.MessageBox.Show("Impossible d’importer ce fichier. Fermez Sticky Notes / OneNote puis réessayez avec plum.sqlite ou notes.sdk_….db. Pour une copie, conservez aussi les fichiers -wal et -shm à côté s’ils existent.\n\n" + ex.Message, "Import Sticky Notes", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AppDialog.Show("Impossible d’importer ce fichier. Fermez Sticky Notes / OneNote puis réessayez avec plum.sqlite ou notes.sdk_….db. Pour une copie, conservez aussi les fichiers -wal et -shm à côté s’ils existent.\n\n" + ex.Message, "Import Sticky Notes", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally { importing = false; }
     }
@@ -341,12 +311,12 @@ public partial class App : System.Windows.Application
         item.Click += (_, _) => action(); return item;
     }
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr handle);
-    private static bool IsStartupEnabled()
+    public static bool IsStartupEnabled()
     {
         using var key = Registry.CurrentUser.OpenSubKey(RunKey);
         return key?.GetValue("BetterStickyNotes") is string;
     }
-    private static void ToggleStartup()
+    public static void ToggleStartup()
     {
         try
         {
@@ -354,7 +324,7 @@ public partial class App : System.Windows.Application
             if (IsStartupEnabled()) key.DeleteValue("BetterStickyNotes", false);
             else key.SetValue("BetterStickyNotes", StartupCommand(Environment.ProcessPath!));
         }
-        catch (Exception ex) { System.Windows.MessageBox.Show("Impossible de modifier le démarrage avec Windows.\n" + ex.Message, "Better Sticky Notes"); }
+        catch (Exception ex) { AppDialog.Show("Impossible de modifier le démarrage avec Windows.\n" + ex.Message, "Better Sticky Notes"); }
     }
     private async void Quit()
     {
