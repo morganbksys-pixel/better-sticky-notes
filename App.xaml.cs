@@ -36,13 +36,11 @@ public partial class App : System.Windows.Application
     private readonly Dictionary<Guid, NoteWindow.EditorState> editorStates = [];
     private readonly Dictionary<Guid, long> visibilityRequests = [];
     private long visibilitySerial;
-    private bool? trayVisible;
     private DispatcherOperation? trimOperation;
     private EventWaitHandle? activation;
     private Mutex? mutex;
     private Forms.NotifyIcon? tray;
     private Drawing.Icon? icon;
-    private Drawing.Icon? hiddenIcon;
     private Window? menuHost;
     private ContextMenu? trayMenu;
     private bool saveErrorShown;
@@ -56,26 +54,28 @@ public partial class App : System.Windows.Application
     {
         if (!startNormally) return;
         base.OnStartup(e);
+        SetCurrentProcessExplicitAppUserModelID("BetterStickyNotes.Desktop");
+        var background = e.Args.Contains("--background", StringComparer.OrdinalIgnoreCase);
         mutex = new Mutex(true, @"Local\BetterStickyNotes.Mvp", out var first);
         activation = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\BetterStickyNotes.Show");
-        if (!first) { activation.Set(); Shutdown(); return; }
+        if (!first)
+        {
+            if (!background) { AllowSetForegroundWindow(uint.MaxValue); activation.Set(); }
+            Shutdown(); return;
+        }
         try { Store.Load(); }
         catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Chargement impossible", MessageBoxButton.OK, MessageBoxImage.Error); Shutdown(); return; }
         RunTrashPurge();
         purgeTimer.Tick += (_, _) => RunTrashPurge(); purgeTimer.Start();
         activationWait = ThreadPool.RegisterWaitForSingleObject(activation, (_, _) => {
-            if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (!quitting) ShowAll(); });
+            if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (!quitting) ShowManager(); });
         }, null, Timeout.Infinite, false);
         icon = MakeIcon();
-        hiddenIcon = MakeGrayscaleIcon(icon);
-        tray = new Forms.NotifyIcon { Icon = hiddenIcon, Text = "Better Sticky Notes — notes masquées", Visible = true };
+        tray = new Forms.NotifyIcon { Icon = icon, Text = AppInfo.DisplayName, Visible = true };
         tray.MouseDoubleClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) ShowManager(); };
         tray.MouseUp += (_, args) => { if (args.Button == Forms.MouseButtons.Right) ShowTrayMenu(); };
-        if (Store.Notes.Count == 0)
-        {
-            NewNote("Bienvenue 👋", "# Vos idées, à portée de main\n\nÉcrivez ici en **Markdown**.\n\n- [ ] Créer ma première note\n- [ ] Épingler une note au premier plan\n\nDouble-cliquez dans le contenu pour modifier la note. Déplacez-la par le bandeau pour revenir à l’aperçu.\n\nL’icône jaune près de l’horloge permet de retrouver toutes vos notes.");
-        }
-        else ShowNotes(Store.Notes.Where(n => !n.Deleted && !n.Hidden).ToList());
+        UpgradeStartupRegistration();
+        PrepareLaunch(background);
         if (Store.LoadWarning is not null) System.Windows.MessageBox.Show(Store.LoadWarning, "Récupération des notes");
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
         SystemEvents.SessionSwitch += SessionChanged;
@@ -139,7 +139,6 @@ public partial class App : System.Windows.Application
             if (!startNormally) { window.Opacity = 0; window.ShowActivated = false; }
             if (editorStates.Remove(note.Id, out var state)) window.RestoreEditorState(state);
             windows.Add(note.Id, window);
-            window.IsVisibleChanged += (_, _) => UpdateTrayVisibility();
         }
         hiddenSince.Remove(note.Id);
         if (hiddenSince.Count == 0) cacheTimer.Stop();
@@ -157,6 +156,7 @@ public partial class App : System.Windows.Application
             notesWindow.Closed += (_, _) => notesWindow = null;
         }
         notesWindow.Show(); notesWindow.WindowState = WindowState.Normal; notesWindow.Activate();
+        SetForegroundWindow(new WindowInteropHelper(notesWindow).Handle);
         if (selected != null) notesWindow.SelectImported(selected);
     }
     public void ShowNotes(IEnumerable<Note> notes, bool rearrange = false) => _ = ShowNotesAsync(notes, rearrange);
@@ -192,15 +192,6 @@ public partial class App : System.Windows.Application
         }
         ScheduleCacheTrim();
         Changed();
-    }
-    private void UpdateTrayVisibility()
-    {
-        if (tray is null) return;
-        var visible = windows.Values.Any(w => w.IsVisible);
-        if (trayVisible == visible) return;
-        trayVisible = visible;
-        tray.Icon = visible ? icon : hiddenIcon;
-        tray.Text = visible ? "Better Sticky Notes — notes affichées" : "Better Sticky Notes — notes masquées";
     }
     private void ScheduleCacheTrim()
     {
@@ -297,6 +288,8 @@ public partial class App : System.Windows.Application
         startup.IsCheckable = true; startup.IsChecked = IsStartupEnabled(); more.Items.Add(startup);
         more.Items.Add(ActionItem("Ouvrir le dossier des données", "\uE8B7", () => { Directory.CreateDirectory(NoteStore.Folder); Process.Start(new ProcessStartInfo(NoteStore.Folder) { UseShellExecute = true }); }));
         menu.Items.Add(more);
+        menu.Items.Add(ActionItem($"À propos — v{AppInfo.Version}", "\uE946", () =>
+            System.Windows.MessageBox.Show($"{AppInfo.DisplayName}\n\nExécutable actif :\n{AppInfo.ExecutablePath}", "À propos de Better Sticky Notes", MessageBoxButton.OK, MessageBoxImage.Information)));
         menu.Items.Add(ActionItem("Quitter", "\uE7E8", Quit));
         return menu;
     }
@@ -359,7 +352,7 @@ public partial class App : System.Windows.Application
         {
             using var key = Registry.CurrentUser.CreateSubKey(RunKey);
             if (IsStartupEnabled()) key.DeleteValue("BetterStickyNotes", false);
-            else key.SetValue("BetterStickyNotes", "\"" + Environment.ProcessPath + "\"");
+            else key.SetValue("BetterStickyNotes", StartupCommand(Environment.ProcessPath!));
         }
         catch (Exception ex) { System.Windows.MessageBox.Show("Impossible de modifier le démarrage avec Windows.\n" + ex.Message, "Better Sticky Notes"); }
     }
@@ -379,7 +372,7 @@ public partial class App : System.Windows.Application
         purgeTimer.Stop();
         saveTimer.Stop(); cacheTimer.Stop(); activationWait?.Unregister(null); trimOperation?.Abort();
         if (trayMenu is not null) trayMenu.IsOpen = false;
-        tray?.Dispose(); icon?.Dispose(); hiddenIcon?.Dispose(); activation?.Dispose(); mutex?.Dispose();
+        tray?.Dispose(); icon?.Dispose(); activation?.Dispose(); mutex?.Dispose();
         base.OnExit(e);
     }
     private static Drawing.Icon MakeIcon()
@@ -387,20 +380,5 @@ public partial class App : System.Windows.Application
         using var stream = GetResourceStream(new Uri("pack://application:,,,/BetterStickyNotes;component/Assets/BetterStickyNotes.ico")).Stream;
         using var source = new Drawing.Icon(stream, 32, 32);
         return (Drawing.Icon)source.Clone();
-    }
-    [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr handle);
-    private static Drawing.Icon MakeGrayscaleIcon(Drawing.Icon source)
-    {
-        using var bitmap = source.ToBitmap();
-        for (var y = 0; y < bitmap.Height; y++)
-            for (var x = 0; x < bitmap.Width; x++)
-            {
-                var pixel = bitmap.GetPixel(x, y);
-                var gray = (int)Math.Round(pixel.R * 0.299 + pixel.G * 0.587 + pixel.B * 0.114);
-                bitmap.SetPixel(x, y, Drawing.Color.FromArgb(pixel.A, gray, gray, gray));
-            }
-        var handle = bitmap.GetHicon();
-        try { using var temporary = Drawing.Icon.FromHandle(handle); return (Drawing.Icon)temporary.Clone(); }
-        finally { DestroyIcon(handle); }
     }
 }

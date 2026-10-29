@@ -2,6 +2,8 @@
 
 Application Windows 10/11 (x64), en C# / .NET 10 et WPF. Notes colorées indépendantes, épinglage au premier plan, Markdown, sauvegarde automatique et icône dans la zone de notification.
 
+La version active est affichée dans le titre de **Mes notes** et dans l’infobulle de l’icône système. Le menu clic droit **À propos** indique également le chemin de l’exécutable actif, utile si plusieurs versions sont présentes.
+
 ## Lancer la version portable
 
 [Télécharger la dernière version pour Windows x64](https://github.com/morganbksys-pixel/better-sticky-notes/releases/latest).
@@ -20,14 +22,14 @@ Extraire entièrement `BetterStickyNotes-win-x64.zip`, puis lancer `BetterSticky
 - Les nouvelles notes apparaissent en bas à droite de l’écran où se trouve la souris, au-dessus de la barre des tâches, puis se décalent vers le haut et la gauche.
 - Les cases à cocher sont interactives dans l’aperçu. Masquer une note laisse l’application dans la zone de notification.
 - Icône jaune : simple clic sans action, double-clic pour ouvrir **Mes notes** ou la ramener au premier plan, clic droit pour toutes les actions (dont afficher/masquer). Créer une note via **Nouvelle note** dans un menu.
-- L’icône système devient grise lorsque toutes les notes sont masquées et redevient jaune dès qu’une note est affichée. L’infobulle indique aussi cet état.
+- L’icône système reste jaune, indépendamment de la visibilité des notes.
 - Le menu système présente les essentiels : **Nouvelle note**, **Afficher / Masquer les notes**, **Mes notes**, **Verrouiller toutes les notes protégées**, **Options**, **Quitter**. **Options** regroupe la corbeille, le démarrage Windows et le dossier des données.
-- **Mes notes** ouvre une fenêtre de gestion : recherche dans les titres et contenus sans distinction de casse ou d’accents, visibilité individuelle, sélection multiple et corbeille sans confirmation. Changer la recherche désélectionne les notes ; **Tout sélectionner** vise uniquement les résultats affichés. La sélection utilise les lignes surlignées, sans coches : clic simple, Ctrl+clic, Maj+clic et Ctrl+A quand la liste a le focus. Le double-clic ne modifie plus la visibilité ; utiliser le bouton de visibilité ou les actions du bas. Suppr envoie la sélection à la corbeille, ou demande confirmation pour la supprimer définitivement depuis la corbeille. Dans la recherche, les raccourcis restent ceux de la saisie de texte.
+- **Mes notes** ouvre une fenêtre de gestion : recherche dans les titres et contenus sans distinction de casse ou d’accents, visibilité individuelle, sélection multiple et corbeille sans confirmation. Changer la recherche désélectionne les notes ; **Tout sélectionner** vise uniquement les résultats affichés. La sélection utilise les lignes surlignées, sans coches : clic simple, Ctrl+clic, Maj+clic et Ctrl+A quand la liste a le focus. Le double-clic affiche la note ciblée et la ramène au premier plan, même si elle était masquée ou réduite, sans modifier son épinglage. Il ne masque jamais une note ; il est sans effet dans la corbeille. Utiliser le bouton de visibilité ou les actions du bas pour masquer. Suppr envoie la sélection à la corbeille, ou demande confirmation pour la supprimer définitivement depuis la corbeille. Dans la recherche, les raccourcis restent ceux de la saisie de texte.
 - Après un import, cette fenêtre s’ouvre avec les nouvelles notes sélectionnées et masquées. Leur premier affichage se fait en cascade en bas à droite de l’écran utilisé. Les positions déjà personnalisées sont conservées. **Réorganiser en cascade** affiche et replace explicitement la sélection. Si le nombre de notes dépasse la place disponible, de nouvelles piles décalées réutilisent l’écran ; la recherche permet alors de choisir un groupe plus petit.
 - Raccourcis dans une note : `Ctrl+N`, `Ctrl+Entrée`, `Ctrl+S`.
-- Relancer le programme déjà ouvert affiche les notes existantes.
+- Lancer le programme ou cliquer sur son raccourci épinglé ouvre **Mes notes**. S’il est déjà lancé, sa fenêtre de gestion est ramenée au premier plan, sans afficher ni déplacer les post-it. **Mes notes** possède une entrée dans la barre des tâches : clic droit sur cette entrée pour épingler l’application. Au lancement à froid, les post-it restent masqués jusqu’à une action explicite.
 
-Pour le démarrage automatique, cocher **Options → Démarrer avec Windows** dans le menu système. L’option est désactivée initialement. Elle utilise la clé Run du compte Windows, sans droits administrateur. Après déplacement de l’exécutable, décocher puis recocher l’option pour mettre à jour son chemin. Décocher avant de supprimer l’application.
+Pour le démarrage automatique, cocher **Options → Démarrer avec Windows** dans le menu système. L’option est désactivée initialement. Elle utilise la clé Run du compte Windows avec l’argument `--background`, sans droits administrateur : aucune fenêtre ne s’ouvre au démarrage de Windows. Une entrée existante créée par l’application est mise à jour vers le nouvel exécutable lors de son lancement. Si nécessaire après déplacement, décocher puis recocher l’option pour actualiser son chemin. Décocher avant de supprimer l’application.
 
 ## Corbeille et notes confidentielles
 

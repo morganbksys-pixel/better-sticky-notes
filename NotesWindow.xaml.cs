@@ -40,6 +40,7 @@ public partial class NotesWindow : Window
     public NotesWindow(App app)
     {
         this.app = app; InitializeComponent(); initialized = true;
+        Title = $"Mes notes — {AppInfo.DisplayName}";
         NoteList.ItemsSource = rows;
         AutoPurge.IsChecked = app.Store.TrashRetentionDays != null;
         PurgeDays.Text = (app.Store.TrashRetentionDays ?? 30).ToString();
@@ -81,7 +82,7 @@ public partial class NotesWindow : Window
     {
         if (SelectionInfo == null || updatingRows) return;
         var count = NoteList.SelectedItems.Count;
-        SelectionInfo.Text = $"{count} note(s) sélectionnée(s)" + (InTrash ? " · Restaurer remet les notes dans Mes notes sans les ouvrir." : " · Ctrl+clic, Maj+clic, Ctrl+A · Suppr : corbeille.");
+        SelectionInfo.Text = $"{count} note(s) sélectionnée(s)" + (InTrash ? " · Restaurer remet les notes dans Mes notes sans les ouvrir." : " · Double-clic : retrouver · Ctrl+clic, Maj+clic, Ctrl+A · Suppr : corbeille.");
         Actions.Visibility = InTrash ? Visibility.Collapsed : Visibility.Visible;
         PurgeSettings.Visibility = InTrash ? Visibility.Visible : Visibility.Collapsed;
         TrashActions.Visibility = InTrash ? Visibility.Visible : Visibility.Collapsed;
@@ -112,6 +113,14 @@ public partial class NotesWindow : Window
         if (InTrash || ((FrameworkElement)sender).DataContext is not Row row) return;
         if (row.Note.Hidden) app.ShowNotes([row.Note]); else app.HideNotes([row.Note]);
         e.Handled = true;
+    }
+    private void OpenRowDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (InTrash || e.ChangedButton != MouseButton.Left || sender is not DataGridRow { Item: Row row }) return;
+        for (var node = e.OriginalSource as DependencyObject; node != null && node != sender; node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+            if (node is System.Windows.Controls.Primitives.ButtonBase) return;
+        e.Handled = true;
+        app.FocusNote(row.Note);
     }
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateSelection();
     private void ListKeyDown(object sender, KeyEventArgs e)

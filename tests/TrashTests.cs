@@ -56,8 +56,13 @@ internal static class TrashTests
         visibility.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent });
         Check(!first.Hidden && second.Hidden && list.SelectedItems.Count == 2, "Bouton de visibilité : une seule note, sélection multiple conservée");
         firstRow.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = Control.MouseDoubleClickEvent });
-        Check(!first.Hidden && second.Hidden, "Double-clic sur une ligne : visibilité inchangée");
+        PerformanceChecks.Pump();
+        Check(!first.Hidden && second.Hidden && !first.Pinned && app.Windows.OfType<NoteWindow>().Any(w => w.IsActive), "Double-clic : note au premier plan sans masquer ni épingler");
         app.HideNotes([first]);
+        manager.Activate();
+        firstRow.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = Control.MouseDoubleClickEvent });
+        Check(!first.Hidden && second.Hidden, "Double-clic sur une note masquée : ouverture de cette note uniquement");
+        app.HideNotes([first]); manager.Activate();
         search.Focus();
         search.RaiseEvent(DeleteKey(search));
         Check(!first.Deleted && !second.Deleted, "Suppr dans la recherche ne supprime aucune note");

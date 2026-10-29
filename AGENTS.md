@@ -1,18 +1,18 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Project Structure
 
-Better Sticky Notes is a Windows 10/11 application using C#/.NET 10 and WPF. Source files live at the repository root:
+Better Sticky Notes targets Windows 10/11 with C#/.NET 10 and WPF. Sources live at the repository root:
 
-- `App.xaml.cs`, `App.Protection.cs`, and `App.Trash.cs` coordinate windows, tray actions, protection, and retention.
-- `NoteWindow.*`, `NotesWindow.*`, and `ImportWindow.*` pair XAML views with code-behind.
-- `Storage.cs` handles persistence; `NoteProtection.cs` handles encryption; `Markdown*` and `StickyNotesImporter.cs` handle rendering, editing, and import.
-- `Assets/` contains the application icon. `tests/` contains the executable regression suite.
-- `bin/`, `obj/`, and `dist/` are generated output; do not commit them.
+- `App*.cs`: lifecycle, navigation, protection, purge, and version information.
+- `*Window.xaml` / `*.xaml.cs`: views and code-behind.
+- `Storage.cs`, `NoteProtection.cs`, `Markdown*`, `StickyNotesImporter.cs`: persistence, encryption, Markdown, and import.
+- `Assets/`: icons; `tests/`: executable regression suite.
+- `bin/`, `obj/`, `dist/`: generated output; never commit these directories.
 
-## Build, Test, and Development Commands
+## Development Commands
 
-Use Windows with the .NET 10 SDK, from the repository root:
+Use Windows and the .NET 10 SDK:
 
 ```powershell
 dotnet build BetterStickyNotes.csproj
@@ -22,20 +22,28 @@ dotnet run --project tests/SmokeTests.csproj -- --benchmark 38
 ./publish.ps1
 ```
 
-These commands build, launch, run regression checks, benchmark 38 notes, and publish a self-contained Windows x64 distribution. Quit any running application before launching another build. Publishing uses the project version and retains only the three newest distributions in `dist/`.
+These build, launch, test, benchmark 38 notes, and publish the portable Windows x64 application. Quit the running application before testing another build.
 
-## Coding Style & Naming Conventions
+## Coding Conventions
 
-Follow existing C# conventions: four-space indentation, file-scoped namespaces, PascalCase types and public members, and camelCase locals and private fields. Keep nullable annotations enabled. Match nearby XAML formatting and French user-facing wording. No dedicated formatter or linter is configured. Respect `.gitattributes`: CRLF for C#, XAML, and PowerShell; LF for Markdown. Run `git diff --check` before committing.
+Use four-space C# indentation, file-scoped namespaces, PascalCase types/public members, camelCase locals/private fields, and nullable annotations. Follow nearby XAML formatting. Keep user-facing text French. No dedicated formatter/linter is configured. Respect `.gitattributes`: CRLF for C#, XAML, PowerShell; LF for Markdown. Run `git diff --check`.
 
-## Testing Guidelines
+## Testing and Diagnosis
 
-Tests use a custom STA console runner with assertions, not xUnit/NUnit; use `dotnet run`, not `dotnet test`. Add focused checks in `tests/*Tests.cs` and register new suites in `tests/Program.cs`. No coverage percentage is enforced. Test persistence, recovery, protection, and affected UI behavior using temporary data. Manually check tray interactions, Windows session locking, and multi-monitor placement when relevant.
+Tests use a custom STA assertion runner, not xUnit/NUnit. Add `tests/*Tests.cs` suites to `tests/Program.cs`; use temporary data. No coverage percentage is mandated. Distinguish automated results from actual Windows checks: taskbar pinning, tray clicks, session locking, and multi-monitor placement. Investigate unexpected behavior by checking the active executable's version/path and shortcut target before attributing a cause.
 
-## Commit & Pull Request Guidelines
+## Product Behavior
 
-History uses concise English summaries, including `Release v0.9.0: ...` and `Prepare v0.1.0 portable release`. Follow that descriptive style; no strict prefix scheme is established. PRs should explain behavior changes, validation, and relevant issues. Include screenshots for UI changes and update `README.md` when usage changes.
+Manual launch, relaunch, and tray double-click open **Mes notes**. Windows startup uses `--background`. Tray single-click does nothing; its icon stays yellow. List double-click reveals only the targeted note without changing pinning. Preserve native multi-selection. Protected notes remain anonymous in lists/search even when unlocked. Screenshot capture is deferred pending a separate request.
 
-## Security & Configuration
+## Versions and Delivery
 
-Personal data resides in `%LocalAppData%\BetterStickyNotes`, including `notes.json`, its backup, and `settings.json`. Never commit personal notes or credentials. Preserve encrypted storage and backup sanitization, keep automatic purge opt-in, and ensure protected titles and content remain anonymous in management views.
+Use `0.minor.patch`: feature batches increment minor; fixes/small adjustments increment patch. Reserve `1.0.0` for user-approved readiness. Read displayed versions from compiled assembly metadata. Publishing retains at most three versions in `dist/`; provide the published executable's path.
+
+## Commits and Pull Requests
+
+Use concise English summaries, e.g. `Release v0.9.0: ...`. PRs explain behavior, validation, relevant issues, and include UI screenshots when applicable. Update `README.md` for usage changes.
+
+## Security
+
+Personal data lives in `%LocalAppData%\BetterStickyNotes`. Never commit notes or credentials. Preserve encrypted storage and backup sanitization. Automatic trash purge remains opt-in.
