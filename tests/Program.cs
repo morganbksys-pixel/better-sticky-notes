@@ -40,11 +40,14 @@ internal static class Program
             Assert(inlines.OfType<Hyperlink>().Count() == 1, "Seuls les protocoles de liens autorisés sont cliquables");
             var app = new App(startNormally: false, dataFolder: Path.Combine(folder, "app")); app.InitializeComponent(); app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             ManagementTests.Run(app, folder);
+            TrashTests.Run(app, folder);
             OptimizationTests.Run(app, folder);
+            ProtectionTests.Run(app, folder);
+            FocusTests.Run(app);
             EditingTests.Run();
             ImportTests.Run(folder);
             var trayMenu = app.BuildTrayMenu();
-            Assert(trayMenu.Items.OfType<MenuItem>().Count() == 5, "Menu système limité aux cinq entrées essentielles");
+            Assert(trayMenu.Items.OfType<MenuItem>().Count() == 6, "Menu système : essentiels et verrouillage des notes protégées");
             Assert(trayMenu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "Options")).Items.OfType<MenuItem>().Count() == 4, "Import, corbeille et réglages disponibles dans Options");
             var window = new NoteWindow(app, new Note { Title = "Mes idées du jour", Text = markdown, Preview = true, Pinned = true });
             window.Opacity = 0; window.ShowActivated = false; window.Show();
@@ -124,6 +127,11 @@ internal static class Program
                 var notesImage = new System.Windows.Media.Imaging.RenderTargetBitmap(900, 580, 96, 96, System.Windows.Media.PixelFormats.Pbgra32); notesImage.Render(notesContent);
                 var notesPng = new System.Windows.Media.Imaging.PngBitmapEncoder(); notesPng.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(notesImage));
                 using var notesOutput = File.Create(Path.Combine(Path.GetDirectoryName(args[0])!, "notes-preview.png")); notesPng.Save(notesOutput);
+                ((TabControl)notesWindow.FindName("NoteTabs")).SelectedIndex = 1;
+                notesContent.UpdateLayout();
+                var trashImage = new System.Windows.Media.Imaging.RenderTargetBitmap(900, 580, 96, 96, System.Windows.Media.PixelFormats.Pbgra32); trashImage.Render(notesContent);
+                var trashPng = new System.Windows.Media.Imaging.PngBitmapEncoder(); trashPng.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(trashImage));
+                using var trashOutput = File.Create(Path.Combine(Path.GetDirectoryName(args[0])!, "trash-preview.png")); trashPng.Save(trashOutput);
                 notesWindow.Close(); app.Store.Notes.Clear();
             }
             window.ClosePermanently();

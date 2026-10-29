@@ -17,20 +17,42 @@ internal static class ManagementTests
         var manager = new NotesWindow(app);
         manager.SelectImported([notes[0].Id, notes[1].Id]);
         var list = (DataGrid)manager.FindName("NoteList");
-        Check(list.Items.Cast<NotesWindow.Row>().Count(r => r.Selected) == 2, "Sélection automatique des notes importées");
+        Check(list.SelectedItems.Count == 2, "Sélection automatique des notes importées");
         ((TextBox)manager.FindName("SearchBox")).Text = "DEPLOIEMENT";
-        Check(list.Items.Count == 1 && list.Items.Cast<NotesWindow.Row>().All(r => !r.Selected), "Recherche réinitialise la sélection et limite les résultats");
+        Check(list.Items.Count == 1 && list.SelectedItems.Count == 0, "Recherche réinitialise la sélection et limite les résultats");
         app.HideNotes(notes.Take(2)); app.DeleteNotes([notes[0]]);
         PerformanceChecks.Wait(app.SaveNowAsync());
         Check(notes[0].Deleted && notes[0].Hidden && !notes[1].Deleted, "Actions groupées limitées aux notes ciblées");
         var loaded = new NoteStore(Path.Combine(folder, "app")); loaded.Load();
         Check(loaded.Notes.Single(n => n.Id == notes[0].Id).Deleted, "Suppression vers la corbeille persistée");
+        var tabs = (TabControl)manager.FindName("NoteTabs");
+        tabs.SelectedIndex = 1;
+        Check(list.Items.Count == 2 && list.Items.Cast<NotesWindow.Row>().All(r => r.Note.Deleted) && list.SelectedItems.Count == 0, "Onglet corbeille : uniquement les notes supprimées, sélection remise à zéro");
+        Check(((Button)manager.FindName("EmptyTrashButton")).IsEnabled && !((Button)manager.FindName("RestoreButton")).IsEnabled,
+            "Vider la corbeille disponible sans sélection, restaurer désactivé");
+        ((TextBox)manager.FindName("SearchBox")).Text = "ancienne";
+        Check(list.Items.Count == 1, "Recherche limitée à la corbeille");
+        list.SelectedItem = list.Items[0];
+        ((Button)manager.FindName("RestoreButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Check(!notes[2].Deleted && notes[2].Hidden && list.Items.Count == 0, "Restauration depuis l’onglet sans ouvrir la note");
+        tabs.SelectedIndex = 0;
+        Check(list.Items.Count == 2 && list.SelectedItems.Count == 0, "Retour aux notes actives : recherche et sélection réinitialisées");
+        var secret = new Note { Title = "Confidentiel", Text = "Secret introuvable" };
+        var key = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        NoteProtection.Protect(secret, key, Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)));
+        var secretRow = new NotesWindow.Row(secret);
+        Check(!secret.IsLocked && secretRow.Title == "Note protégée 🔒" && secretRow.Excerpt == "Contenu protégé" && !NoteManagement.Matches(secret, "secret"),
+            "Note protégée déverrouillée : titre, extrait et recherche anonymisés");
+        secret.Deleted = true;
+        Check(NoteManagement.Matches(secret, "", true) && !NoteManagement.Matches(secret, "confidentiel", true), "Anonymisation également dans la recherche de la corbeille");
+        NoteProtection.Lock(secret); System.Security.Cryptography.CryptographicOperations.ZeroMemory(key);
         manager.Close(); app.Store.Notes.Clear();
         foreach (var area in new[] { new Rect(0, 0, 1920, 1040), new Rect(-2560, 0, 2560, 1400), new Rect(0, 0, 800, 600) })
         {
             var positions = Enumerable.Range(0, 20).Select(i => NoteManagement.Cascade(area, new Size(340, 360), i)).ToList();
             Check(positions.All(p => area.Contains(new Rect(p, new Size(340, 360)))), "Cascade dans la zone utilisable, y compris écran à coordonnées négatives");
-            Check(positions[0] != positions[1] && positions[1].Y < positions[0].Y, "Décalage visible vers le haut et la droite");
+            Check(positions[0].X == area.Right - 340 - 16 && positions[0].Y == area.Bottom - 360 - 16, "Première position en bas à droite de la zone utilisable");
+            Check(positions[1].X < positions[0].X && positions[1].Y < positions[0].Y, "Décalage visible vers le haut et la gauche");
         }
         var migration = new NoteStore(Path.Combine(folder, "migration"));
         migration.Notes.Add(new Note { WindowsStickyNoteId = "old-import", Left = 120, Top = 120 });

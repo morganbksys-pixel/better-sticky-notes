@@ -16,6 +16,7 @@ public partial class NoteWindow : Window
     private readonly App app;
     private readonly Note note;
     private bool ready;
+    private bool clearingSensitiveContent;
     private bool allowClose;
     private bool draggingHeader;
     private readonly List<(Button Button, MarkdownTool Tool, string Label)> editingButtons = [];
@@ -33,8 +34,8 @@ public partial class NoteWindow : Window
         TitleBox.Text = note.Title; Editor.Text = note.Text;
         Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title;
         ApplyColor(note.Color); ApplyPin(); ApplyPreview();
-        TitleBox.TextChanged += (_, _) => { note.Title = TitleBox.Text; Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title; app.Changed(); };
-        Editor.TextChanged += (_, _) => { note.Text = Editor.Text; app.Changed(); };
+        TitleBox.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Title = TitleBox.Text; Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title; app.Changed(); };
+        Editor.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Text = Editor.Text; app.Changed(); };
         LocationChanged += (_, _) => { if (draggingHeader && !note.Preview) SetPreview(true); SaveBounds(); }; SizeChanged += (_, _) => SaveBounds();
         Loaded += (_, _) => {
             ready = true; EnsureVisibleOnScreen(); SaveBounds();
@@ -42,6 +43,9 @@ public partial class NoteWindow : Window
             if (!note.Preview && IsActive) Editor.Focus();
         };
         IsVisibleChanged += (_, _) => { if (IsVisible) SetPreview(true); };
+        Deactivated += (_, _) => ScheduleInactivePreview();
+        // Include the TextBox's built-in spelling menu, which handles routed events.
+        AddHandler(ContextMenuService.ContextMenuClosingEvent, new ContextMenuEventHandler((_, _) => ScheduleInactivePreview()), true);
         Closing += OnClosing;
         PreviewKeyDown += (_, e) =>
         {
@@ -56,6 +60,19 @@ public partial class NoteWindow : Window
             else if (e.Key == Key.N) { app.NewNote(); e.Handled = true; }
             else if (e.Key == Key.S) { _ = app.SaveNowAsync(); e.Handled = true; }
         };
+    }
+    private void ScheduleInactivePreview()
+    {
+        // Let menu actions and activation changes finish before replacing the editor.
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+        {
+            if (!ready || !IsVisible || clearingSensitiveContent || note.Preview || IsActive) return;
+            var foreground = GetForegroundWindow();
+            var handle = new WindowInteropHelper(this).Handle;
+            // Menus/popups belong to this native window. A different app or note does not.
+            if (foreground != IntPtr.Zero && GetAncestor(foreground, 3 /* GA_ROOTOWNER */) == handle) return;
+            SetPreview(true);
+        });
     }
     private void SaveBounds()
     {
@@ -130,15 +147,20 @@ public partial class NoteWindow : Window
     private void TogglePin(object sender, RoutedEventArgs e) { note.Pinned = !note.Pinned; ApplyPin(); app.Changed(); }
     private void NewNote(object sender, RoutedEventArgs e) => app.NewNote();
     private void HideClick(object sender, RoutedEventArgs e) => HideNote();
-    private void DeleteClick(object sender, RoutedEventArgs e)
+    private void DeleteClick(object sender, RoutedEventArgs e) => app.Delete(note);
+    public void ClearSensitiveContent()
     {
-        var title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre" : note.Title;
-        if (System.Windows.MessageBox.Show(this, $"Mettre la note « {title} » à la corbeille ?\n\nVous pourrez la restaurer depuis le menu de l’icône système.", "Supprimer la note", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes)
-            app.Delete(note);
+        clearingSensitiveContent = true;
+        Editor.IsUndoEnabled = false; TitleBox.IsUndoEnabled = false;
+        Editor.Clear(); TitleBox.Clear(); Title = "Note protégée";
+        Previewer.Document = null; renderedText = null; pendingEditorState = null;
+        if (markdownHelp != null) markdownHelp.IsOpen = false;
     }
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeRect { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr handle, out NativeRect rect);
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr handle, uint flags);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr handle, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
     public void PlaceBottomLeft(Forms.Screen screen) => PlaceInCascade(screen, 0);
     public void PlaceInCascade(Forms.Screen screen, int index)
@@ -168,7 +190,13 @@ public partial class NoteWindow : Window
         SpellCheck.SetIsEnabled(Editor, false);
     }
     public void ClosePermanently() { ready = false; allowClose = true; if (markdownHelp != null) markdownHelp.IsOpen = false; Close(); }
-    private void OnClosing(object? sender, CancelEventArgs e) { if (!allowClose) { e.Cancel = true; HideNote(); } }
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (allowClose) return;
+        e.Cancel = true;
+        // A protected window is destroyed on hide; wait until Closing has returned.
+        if (note.IsProtected) Dispatcher.BeginInvoke(HideNote); else HideNote();
+    }
     private void DragHeader(object sender, MouseButtonEventArgs e)
     {
         // Leave text selection and buttons alone; the surrounding header moves the note.
@@ -238,8 +266,18 @@ public partial class NoteWindow : Window
             item.Click += (_, _) => { ApplyColor(color); app.Changed(); }; colors.Items.Add(item);
         }
         menu.Items.Add(colors);
+        var protect = new MenuItem { Header = note.IsProtected ? "Verrouiller" : "Protéger par mot de passe…", Icon = MenuIcon("\uE72E") };
+        protect.Click += (_, _) => { if (note.IsProtected) app.LockNote(note); else app.ProtectNote(note); };
+        menu.Items.Add(protect);
+        if (note.IsProtected)
+        {
+            var unprotect = new MenuItem { Header = "Retirer la protection…" };
+            unprotect.Click += (_, _) => app.RemoveProtection(note); menu.Items.Add(unprotect);
+        }
+
         menu.Items.Add(new Separator());
-        var delete = new MenuItem { Header = "Mettre à la corbeille…", Icon = MenuIcon("\uE74D") }; delete.Click += DeleteClick; menu.Items.Add(delete);
+        var delete = new MenuItem { Header = "Mettre à la corbeille", Icon = MenuIcon("\uE74D") }; delete.Click += DeleteClick; menu.Items.Add(delete);
+        menu.Closed += (_, _) => ScheduleInactivePreview();
         menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
     }
     private static TextBlock MenuIcon(string glyph) => new() { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14 };
@@ -264,6 +302,7 @@ public partial class NoteWindow : Window
                 var item = new MenuItem { Header = entry.Label };
                 item.Click += (_, _) => MarkdownEditing.Apply(Editor, entry.Tool); menu.Items.Add(item);
             }
+            menu.Closed += (_, _) => ScheduleInactivePreview();
             menu.PlacementTarget = overflowButton; menu.IsOpen = true;
         };
         EditingBar.Children.Add(overflowButton);
@@ -304,6 +343,7 @@ public partial class NoteWindow : Window
         markdownHelp = new System.Windows.Controls.Primitives.Popup { Child = border, PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Top, StaysOpen = false, AllowsTransparency = true };
         border.PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { markdownHelp.IsOpen = false; Editor.Focus(); e.Handled = true; } };
         markdownHelp.Opened += (_, _) => border.Focus();
+        markdownHelp.Closed += (_, _) => ScheduleInactivePreview();
         markdownHelp.IsOpen = true;
     }
 }

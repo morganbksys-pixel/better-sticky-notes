@@ -12,22 +12,40 @@ Extraire entièrement `BetterStickyNotes-win-x64.zip`, puis lancer `BetterSticky
 - Fenêtres aux coins arrondis et au fond extérieur transparent. Glisser le titre ou la poignée à gauche pour déplacer la note.
 - Double-cliquer sur le titre (ou utiliser `F2` / **Renommer la note**) pour le modifier. Entrée ou un clic ailleurs termine l’édition ; la poignée reste disponible pendant la saisie.
 - **Punaise** : activer ou désactiver le premier plan. Elle est droite et surlignée lorsque la note est épinglée, inclinée et atténuée sinon.
-- Les notes s’ouvrent en aperçu. Double-cliquer sur leur contenu passe en édition ; déplacer réellement la note par le bandeau revient à l’aperçu. Un simple clic sur le bandeau ou un changement de fenêtre conserve l’édition. `Ctrl+Entrée` bascule aussi entre les deux modes.
+- Les notes s’ouvrent en aperçu. Double-cliquer sur leur contenu passe en édition ; déplacer réellement la note par le bandeau revient à l’aperçu. Passer à une autre application ou une autre fenêtre affiche automatiquement le rendu Markdown de la dernière saisie ; revenir sur la note la laisse en aperçu. Un simple clic sur le bandeau et l’utilisation des menus (correction, mise en forme, couleur, aide) conservent l’édition. `Ctrl+Entrée` bascule aussi entre les deux modes.
 - Le bandeau présente **[…] / Punaise / Masquer**. L’œil barré masque directement la note.
 - En édition, une barre en bas à gauche propose gras (`Ctrl+B`), italique (`Ctrl+I`), liste, checklist, code et lien (`Ctrl+K`). Sélectionner plusieurs lignes puis **Code** crée un bloc de code. Sans sélection, un exemple est inséré. Les actions sont annulables avec `Ctrl+Z`.
 - Le bouton **?** ouvre un aide-mémoire Markdown, refermable avec Échap ou un clic ailleurs. Les outils supplémentaires passent dans **…** lorsque la note est étroite.
-- **⋯** regroupe les autres actions : nouvelle note, renommer, couleur et corbeille avec confirmation.
-- Les nouvelles notes apparaissent en bas à gauche de l’écran où se trouve la souris, au-dessus de la barre des tâches.
+- **⋯** regroupe les autres actions : nouvelle note, renommer, couleur et corbeille sans confirmation.
+- Les nouvelles notes apparaissent en bas à droite de l’écran où se trouve la souris, au-dessus de la barre des tâches, puis se décalent vers le haut et la gauche.
 - Les cases à cocher sont interactives dans l’aperçu. Masquer une note laisse l’application dans la zone de notification.
-- Icône jaune : clic ou double-clic pour afficher/masquer (une seule bascule), clic droit pour toutes les actions. Créer une note via **Nouvelle note** dans un menu.
+- Icône jaune : simple clic sans action, double-clic pour ouvrir **Mes notes** ou la ramener au premier plan, clic droit pour toutes les actions (dont afficher/masquer). Créer une note via **Nouvelle note** dans un menu.
 - L’icône système devient grise lorsque toutes les notes sont masquées et redevient jaune dès qu’une note est affichée. L’infobulle indique aussi cet état.
-- Le menu système présente les essentiels : **Nouvelle note**, **Afficher / Masquer les notes**, **Mes notes**, **Options**, **Quitter**. **Options** regroupe la corbeille, le démarrage Windows et le dossier des données.
-- **Mes notes** ouvre une fenêtre de gestion : recherche dans les titres et contenus sans distinction de casse ou d’accents, visibilité individuelle, sélection multiple et corbeille avec confirmation. Changer la recherche désélectionne les notes ; **Tout sélectionner** vise uniquement les résultats affichés. Un double-clic sur une ligne affiche ou masque la note.
-- Après un import, cette fenêtre s’ouvre avec les nouvelles notes sélectionnées et masquées. Leur premier affichage se fait en cascade en bas à gauche de l’écran utilisé. Les positions déjà personnalisées sont conservées. **Réorganiser en cascade** affiche et replace explicitement la sélection. Si le nombre de notes dépasse la place disponible, de nouvelles piles décalées réutilisent l’écran ; la recherche permet alors de choisir un groupe plus petit.
+- Le menu système présente les essentiels : **Nouvelle note**, **Afficher / Masquer les notes**, **Mes notes**, **Verrouiller toutes les notes protégées**, **Options**, **Quitter**. **Options** regroupe la corbeille, le démarrage Windows et le dossier des données.
+- **Mes notes** ouvre une fenêtre de gestion : recherche dans les titres et contenus sans distinction de casse ou d’accents, visibilité individuelle, sélection multiple et corbeille sans confirmation. Changer la recherche désélectionne les notes ; **Tout sélectionner** vise uniquement les résultats affichés. La sélection utilise les lignes surlignées, sans coches : clic simple, Ctrl+clic, Maj+clic et Ctrl+A quand la liste a le focus. Le double-clic ne modifie plus la visibilité ; utiliser le bouton de visibilité ou les actions du bas. Suppr envoie la sélection à la corbeille, ou demande confirmation pour la supprimer définitivement depuis la corbeille. Dans la recherche, les raccourcis restent ceux de la saisie de texte.
+- Après un import, cette fenêtre s’ouvre avec les nouvelles notes sélectionnées et masquées. Leur premier affichage se fait en cascade en bas à droite de l’écran utilisé. Les positions déjà personnalisées sont conservées. **Réorganiser en cascade** affiche et replace explicitement la sélection. Si le nombre de notes dépasse la place disponible, de nouvelles piles décalées réutilisent l’écran ; la recherche permet alors de choisir un groupe plus petit.
 - Raccourcis dans une note : `Ctrl+N`, `Ctrl+Entrée`, `Ctrl+S`.
 - Relancer le programme déjà ouvert affiche les notes existantes.
 
 Pour le démarrage automatique, cocher **Options → Démarrer avec Windows** dans le menu système. L’option est désactivée initialement. Elle utilise la clé Run du compte Windows, sans droits administrateur. Après déplacement de l’exécutable, décocher puis recocher l’option pour mettre à jour son chemin. Décocher avant de supprimer l’application.
+
+## Corbeille et notes confidentielles
+
+**Mes notes** propose les onglets **Mes notes** et **Corbeille**, chacun avec recherche et sélection multiple. Les boutons **Tout sélectionner / Désélectionner** sont à gauche, le compteur à droite. Dans **Corbeille**, on peut restaurer la sélection, la supprimer définitivement ou vider toute la corbeille (même avec un filtre actif). La restauration remet les notes dans Mes notes, masquées, sans ouvrir leurs fenêtres.
+
+**Purge automatique** : dans l’onglet Corbeille, cocher l’option, saisir un délai de 1 à 36 500 jours, puis cliquer sur **Appliquer**. Elle est désactivée par défaut. Une fois activée, les notes arrivées à échéance sont supprimées définitivement sans confirmation, dès l’application du réglage, au démarrage puis toutes les heures tant que l’application tourne, indépendamment de la recherche et de la sélection. Le délai part de la date de mise à la corbeille ; restaurer puis supprimer à nouveau une note le réinitialise. Les anciennes notes sans date reçoivent une date au premier chargement de cette version, enregistrée pour les démarrages suivants. Le réglage est stocké dans `settings.json` à côté des notes ; s’il est illisible, la purge reste désactivée.
+
+La mise à la corbeille est immédiate, pour une note comme pour une sélection. Dans **Options → Corbeille**, chaque note propose **Restaurer** et **Supprimer définitivement…**. **Vider la corbeille…** supprime toutes les notes qui s’y trouvent. Seules les suppressions définitives demandent confirmation ; elles retirent aussi les notes de la sauvegarde `.bak` après un enregistrement réussi.
+
+Dans le menu **⋯** d’une note, choisir **Protéger par mot de passe…**. La première note protégée définit un mot de passe commun (12 caractères minimum, à confirmer) ; les suivantes demandent ce même mot de passe. La note est ensuite verrouillée et masquée. Dans **Mes notes**, elle apparaît comme **Note protégée 🔒**, sans titre ni extrait confidentiel : le bouton de visibilité **Déverrouiller**, ou **Afficher la sélection**, demande le mot de passe et ouvre la note. Les titres et extraits restent anonymisés dans les deux onglets, même lorsque la note est déverrouillée dans sa propre fenêtre. Une recherche non vide exclut les notes protégées ; effacer la recherche pour les retrouver.
+
+Le menu d’une note déverrouillée propose **Verrouiller** et **Retirer la protection…** (mot de passe obligatoire). Masquer la note, fermer sa fenêtre ou verrouiller la session Windows la reverrouille. Le menu système permet de toutes les verrouiller. Après un redémarrage, elles restent verrouillées ; **Afficher les notes** depuis l’icône système affiche seulement les notes déjà accessibles. Depuis **Mes notes**, afficher une sélection demande le mot de passe pour chaque note verrouillée.
+
+Les titres et contenus sont chiffrés avec AES-256-GCM et une clé dérivée du mot de passe par PBKDF2-SHA256 (600 000 itérations, sel aléatoire). Ils restent chiffrés sur disque pendant l’édition ; le mot de passe et les clés ne sont pas enregistrés. L’identifiant, la couleur, les dimensions et les autres métadonnées restent lisibles. Le verrouillage vide les contrôles et réinitialise l’historique d’annulation. La corbeille conserve la protection.
+
+**Un mot de passe oublié ne peut pas être récupéré.** Tant qu’il reste une note protégée, y compris dans la corbeille, le même mot de passe s’applique aux nouvelles protections. Si toutes les protections sont retirées ou toutes les notes protégées supprimées définitivement, la prochaine protection permet de choisir un nouveau mot de passe.
+
+La copie `.bak` est actualisée avec les données chiffrées lorsqu’une protection est activée ; en présence de notes protégées, elle contient la même version que le fichier principal après une sauvegarde réussie. Les anciennes copies externes, les fichiers historiques `.damaged-*` et la base Sticky Notes d’origine ne sont pas modifiés : ils peuvent contenir une ancienne version en clair. Cette protection ne réalise pas un effacement sécurisé du disque ni du presse-papiers.
 
 ## Importer les Sticky Notes de Windows
 
@@ -43,7 +61,7 @@ En cas de fichier verrouillé, fermer Sticky Notes puis réessayer. Pour utilise
 
 Les notes sont stockées dans `%LocalAppData%\BetterStickyNotes\notes.json`, avec une sauvegarde `.bak`. Le programme est portable ; les données restent attachées au compte Windows. Le menu système ouvre ce dossier. Pour transférer les notes, quitter l’application sur les deux postes et copier ce dossier. Pas de compte ni de synchronisation réseau.
 
-L’enregistrement est automatique après une courte pause de saisie. Une copie précédente est conservée et les écritures remplacent le fichier de façon atomique. Si le fichier principal est illisible, l’application tente la sauvegarde et conserve le fichier endommagé.
+L’enregistrement est automatique après une courte pause de saisie. Une copie de secours est conservée et les écritures remplacent le fichier de façon atomique. Hors protection ou suppression définitive, cette copie conserve la version précédente. Si le fichier principal est illisible, l’application tente la sauvegarde et conserve le fichier endommagé.
 
 ## Markdown pris en charge
 
@@ -68,5 +86,7 @@ dotnet run --project tests/SmokeTests.csproj -- --benchmark 38
 dotnet run --project tests/SmokeTests.csproj -- --benchmark 100
 ./publish.ps1
 ```
+
+La publication locale crée `dist/BetterStickyNotes-<version>/BetterStickyNotes.exe` et son ZIP autonome. Après une publication réussie, le script conserve les trois versions les plus récentes (dossiers et ZIP) et actualise `SHA256SUMS.txt`. Les données personnelles dans `%LocalAppData%` ne sont pas touchées.
 
 Les tests couvrent la sauvegarde, la récupération, les positions des tâches Markdown, le filtrage des liens et la construction WPF. Vérifier manuellement le menu système, le premier plan entre applications, le démarrage Windows et les configurations multi-écrans avant diffusion plus large.

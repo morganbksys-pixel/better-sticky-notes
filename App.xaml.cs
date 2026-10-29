@@ -61,18 +61,16 @@ public partial class App : System.Windows.Application
         if (!first) { activation.Set(); Shutdown(); return; }
         try { Store.Load(); }
         catch (Exception ex) { System.Windows.MessageBox.Show(ex.Message, "Chargement impossible", MessageBoxButton.OK, MessageBoxImage.Error); Shutdown(); return; }
+        RunTrashPurge();
+        purgeTimer.Tick += (_, _) => RunTrashPurge(); purgeTimer.Start();
         activationWait = ThreadPool.RegisterWaitForSingleObject(activation, (_, _) => {
             if (!Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(() => { if (!quitting) ShowAll(); });
         }, null, Timeout.Infinite, false);
         icon = MakeIcon();
         hiddenIcon = MakeGrayscaleIcon(icon);
         tray = new Forms.NotifyIcon { Icon = hiddenIcon, Text = "Better Sticky Notes — notes masquées", Visible = true };
-        var clickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(Forms.SystemInformation.DoubleClickTime + 30) };
-        clickTimer.Tick += (_, _) => { clickTimer.Stop(); if (windows.Values.Any(w => w.IsVisible)) HideAll(); else ShowAll(); };
-        // Coalesce single and double clicks into one visibility toggle.
-        tray.MouseClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) { clickTimer.Stop(); clickTimer.Start(); } };
-        tray.MouseDoubleClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) { clickTimer.Stop(); clickTimer.Start(); } };
-        tray.MouseUp += (_, args) => { if (args.Button == Forms.MouseButtons.Right) { clickTimer.Stop(); ShowTrayMenu(); } };
+        tray.MouseDoubleClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) ShowManager(); };
+        tray.MouseUp += (_, args) => { if (args.Button == Forms.MouseButtons.Right) ShowTrayMenu(); };
         if (Store.Notes.Count == 0)
         {
             NewNote("Bienvenue 👋", "# Vos idées, à portée de main\n\nÉcrivez ici en **Markdown**.\n\n- [ ] Créer ma première note\n- [ ] Épingler une note au premier plan\n\nDouble-cliquez dans le contenu pour modifier la note. Déplacez-la par le bandeau pour revenir à l’aperçu.\n\nL’icône jaune près de l’horloge permet de retrouver toutes vos notes.");
@@ -80,6 +78,7 @@ public partial class App : System.Windows.Application
         else ShowNotes(Store.Notes.Where(n => !n.Deleted && !n.Hidden).ToList());
         if (Store.LoadWarning is not null) System.Windows.MessageBox.Show(Store.LoadWarning, "Récupération des notes");
         SystemEvents.DisplaySettingsChanged += DisplayChanged;
+        SystemEvents.SessionSwitch += SessionChanged;
         SessionEnding += (_, e) => { quitting = true; if (!SaveNow()) { e.Cancel = true; quitting = false; } };
     }
 
@@ -130,6 +129,7 @@ public partial class App : System.Windows.Application
     public void Open(Note note, Forms.Screen? screen = null, bool activate = true)
     {
         if (note.Deleted || quitting) return;
+        if (!UnlockNote(note)) return;
         var place = note.HasPlacement != true;
         screen ??= Forms.Screen.FromPoint(Forms.Cursor.Position);
         note.Hidden = false;
@@ -185,6 +185,7 @@ public partial class App : System.Windows.Application
     {
         foreach (var note in notes.Where(n => !n.Deleted).ToList())
         {
+            if (note.IsProtected) { LockNote(note); continue; }
             note.Hidden = true;
             visibilityRequests[note.Id] = ++visibilitySerial;
             if (windows.TryGetValue(note.Id, out var window)) { window.HideForCache(); hiddenSince[note.Id] = DateTime.UtcNow; }
@@ -225,7 +226,7 @@ public partial class App : System.Windows.Application
     }
     private void ShowAll()
     {
-        var notes = Store.Notes.Where(n => !n.Deleted).ToList();
+        var notes = Store.Notes.Where(n => !n.Deleted && !n.IsLocked).ToList();
         ShowNotes(notes);
     }
     private void HideAll() => HideNotes(Store.Notes);
@@ -235,14 +236,17 @@ public partial class App : System.Windows.Application
     {
         foreach (var note in notes.ToList())
         {
-            note.Deleted = true; note.Hidden = true;
+            if (!note.Deleted) note.DeletedAtUtc = DateTimeOffset.UtcNow;
+            note.Deleted = true;
+            if (note.IsProtected) { LockNote(note); continue; }
+            note.Hidden = true;
             visibilityRequests[note.Id] = ++visibilitySerial;
             hiddenSince.Remove(note.Id); editorStates.Remove(note.Id);
             if (windows.Remove(note.Id, out var window)) window.ClosePermanently();
         }
         Changed();
     }
-    private static string Label(Note n) => string.IsNullOrWhiteSpace(n.Title) ? "Sans titre" : n.Title;
+    private static string Label(Note n) => n.DisplayTitle;
     private void ShowTrayMenu()
     {
         if (trayMenu?.IsOpen == true) { trayMenu.IsOpen = false; return; }
@@ -266,13 +270,28 @@ public partial class App : System.Windows.Application
         var visible = windows.Values.Any(w => w.IsVisible);
         menu.Items.Add(ActionItem(visible ? "Masquer les notes" : "Afficher les notes", "\uE890", () => { if (visible) HideAll(); else ShowAll(); }));
         menu.Items.Add(ActionItem("Mes notes", "\uE8A5", () => ShowManager()));
+        menu.Items.Add(ActionItem("Verrouiller toutes les notes protégées", "\uE72E", LockProtectedNotes));
         menu.Items.Add(new Separator());
         var more = new MenuItem { Header = "Options", Icon = Glyph("\uE713") };
         var import = ActionItem("Importer depuis Sticky Notes…", "\uE8B5", ImportStickyNotes);
         import.IsEnabled = !importing; more.Items.Add(import);
-        var trash = new MenuItem { Header = "Corbeille — restaurer", Icon = Glyph("\uE74D") };
-        foreach (var note in Store.Notes.Where(n => n.Deleted)) trash.Items.Add(ActionItem(Label(note), "\uE777", () => { note.Deleted = false; Open(note); }));
-        trash.IsEnabled = trash.Items.Count > 0; more.Items.Add(trash);
+        var trash = new MenuItem { Header = "Corbeille", Icon = Glyph("\uE74D") };
+        foreach (var note in Store.Notes.Where(n => n.Deleted))
+        {
+            var entry = new MenuItem { Header = Label(note) };
+            entry.Items.Add(ActionItem("Restaurer", "\uE777", () => {
+                RestoreNotes([note]); ShowManager([note.Id]);
+            }));
+            entry.Items.Add(ActionItem("Supprimer définitivement…", "\uE74D", () => ConfirmPermanentDeletion([note])));
+            trash.Items.Add(entry);
+        }
+        trash.IsEnabled = trash.Items.Count > 0;
+        if (trash.IsEnabled)
+        {
+            trash.Items.Add(new Separator());
+            trash.Items.Add(ActionItem("Vider la corbeille…", "\uE74D", () => ConfirmPermanentDeletion(Store.Notes.Where(n => n.Deleted))));
+        }
+        more.Items.Add(trash);
         more.Items.Add(new Separator());
         var startup = ActionItem("Démarrer avec Windows", "\uE7E8", ToggleStartup);
         startup.IsCheckable = true; startup.IsChecked = IsStartupEnabled(); more.Items.Add(startup);
@@ -355,6 +374,9 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         SystemEvents.DisplaySettingsChanged -= DisplayChanged;
+        SystemEvents.SessionSwitch -= SessionChanged;
+        LockProtectedNotes();
+        purgeTimer.Stop();
         saveTimer.Stop(); cacheTimer.Stop(); activationWait?.Unregister(null); trimOperation?.Abort();
         if (trayMenu is not null) trayMenu.IsOpen = false;
         tray?.Dispose(); icon?.Dispose(); hiddenIcon?.Dispose(); activation?.Dispose(); mutex?.Dispose();

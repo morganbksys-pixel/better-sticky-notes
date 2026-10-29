@@ -9,7 +9,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/BetterStickyNotes.ico</ApplicationIcon>
     <AssemblyName>BetterStickyNotes</AssemblyName>
-    <Version>0.6.2</Version>
+    <Version>0.9.0</Version>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="Markdig" Version="0.41.3" /></ItemGroup>
   <ItemGroup><PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.14" /></ItemGroup>

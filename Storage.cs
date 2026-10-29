@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BetterStickyNotes;
 
@@ -16,10 +17,25 @@ public sealed class Note
     public bool Pinned { get; set; }
     public bool Hidden { get; set; }
     public bool Deleted { get; set; }
+    public DateTimeOffset? DeletedAtUtc { get; set; }
     public bool Preview { get; set; } = true;
     public string? WindowsStickyNoteId { get; set; }
     public bool? HasPlacement { get; set; }
-    public Note Snapshot() => (Note)MemberwiseClone();
+    public EncryptedNote? Protection { get; set; }
+    [JsonIgnore] public byte[]? ProtectionKey { get; set; }
+    [JsonIgnore] public bool IsProtected => Protection != null;
+    [JsonIgnore] public bool IsLocked => IsProtected && ProtectionKey == null;
+    [JsonIgnore] public string DisplayTitle => IsLocked ? "Note protégée 🔒" : string.IsNullOrWhiteSpace(Title) ? "Sans titre" : Title;
+    public Note Snapshot()
+    {
+        var snapshot = (Note)MemberwiseClone();
+        if (IsProtected)
+        {
+            if (!IsLocked) snapshot.Protection = NoteProtection.Encrypt(this, ProtectionKey!, Protection!.Salt);
+            snapshot.Title = ""; snapshot.Text = ""; snapshot.ProtectionKey = null;
+        }
+        return snapshot;
+    }
 }
 
 public sealed class NoteStore
@@ -28,12 +44,36 @@ public sealed class NoteStore
     private readonly string path;
     private readonly object writeLock = new();
     private Task writeTail = Task.CompletedTask;
+    // Kept on after sensitive changes so retries also sanitize the recovery copy.
+    public bool SanitizeBackup { get; set; }
     public NoteStore(string? folder = null) => path = Path.Combine(folder ?? Folder, "notes.json");
     public List<Note> Notes { get; private set; } = [];
     public string? LoadWarning { get; private set; }
+    public int? TrashRetentionDays { get; private set; }
+    private string SettingsPath => Path.Combine(Path.GetDirectoryName(path)!, "settings.json");
+    private sealed record Settings(int? TrashRetentionDays);
+    public void SaveTrashRetention(int? days)
+    {
+        if (days is < 1 or > 36500) throw new ArgumentOutOfRangeException(nameof(days));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(SettingsPath + ".tmp", JsonSerializer.Serialize(new Settings(days)));
+        File.Move(SettingsPath + ".tmp", SettingsPath, true);
+        TrashRetentionDays = days;
+    }
 
     public void Load()
     {
+        TrashRetentionDays = null;
+        try
+        {
+            if (File.Exists(SettingsPath))
+            {
+                var settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(SettingsPath));
+                if (settings?.TrashRetentionDays is >= 1 and <= 36500) TrashRetentionDays = settings.TrashRetentionDays;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        { LoadWarning = "Réglage de purge illisible : la purge automatique est désactivée."; }
         if (!File.Exists(path)) return;
         try { Notes = Read(path); }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
@@ -46,8 +86,12 @@ public sealed class NoteStore
             File.Copy(backup, path, true);
             LoadWarning = "Les notes ont été récupérées depuis la sauvegarde précédente.";
         }
+        var migrated = false;
         foreach (var n in Notes)
         {
+            if (n.Deleted && n.DeletedAtUtc == null) { n.DeletedAtUtc = DateTimeOffset.UtcNow; migrated = true; }
+            if (!n.Deleted) n.DeletedAtUtc = null;
+            if (n.IsProtected) { n.Title = ""; n.Text = ""; n.Hidden = true; }
             n.Title ??= ""; n.Text ??= "";
             n.Width = double.IsFinite(n.Width) ? Math.Clamp(n.Width, 260, 3000) : 340;
             n.Height = double.IsFinite(n.Height) ? Math.Clamp(n.Height, 220, 3000) : 360;
@@ -56,22 +100,32 @@ public sealed class NoteStore
             // Old imports shared the default coordinates; preserve other existing placements.
             n.HasPlacement ??= !(n.WindowsStickyNoteId != null && n.Left == 120 && n.Top == 120);
         }
+        if (migrated) Save();
     }
     private static List<Note> Read(string file) => JsonSerializer.Deserialize<List<Note>>(File.ReadAllText(file)) ?? throw new JsonException("Fichier vide.");
     public Task SaveAsync()
     {
         // Capture immutable values on the UI thread, serialize and write on a worker.
         var snapshot = Notes.Select(n => n.Snapshot()).ToList();
+        var sanitize = SanitizeBackup || snapshot.Any(n => n.IsProtected);
         lock (writeLock)
-            return writeTail = writeTail.ContinueWith(_ => Write(snapshot), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+            return writeTail = writeTail.ContinueWith(_ => Write(snapshot, sanitize), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
     public void Save() => SaveAsync().GetAwaiter().GetResult();
-    private void Write(List<Note> snapshot)
+    private void Write(List<Note> snapshot, bool sanitize)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(snapshot, new JsonSerializerOptions { WriteIndented = true }));
-        if (File.Exists(path)) File.Replace(temp, path, path + ".bak");
+        if (sanitize)
+        {
+            // Replace backup first: after success neither app-managed copy contains old secrets.
+            var backupTemp = path + ".bak.tmp";
+            File.Copy(temp, backupTemp, true);
+            File.Move(backupTemp, path + ".bak", true);
+            File.Move(temp, path, true);
+        }
+        else if (File.Exists(path)) File.Replace(temp, path, path + ".bak");
         else File.Move(temp, path);
     }
 }
