@@ -19,16 +19,18 @@ public partial class NotesWindow : Window
         public string ProtectionState => Note.IsLocked ? "Note protégée verrouillée" : Note.IsProtected ? "Note protégée déverrouillée" : "";
         public string GroupLabel { get; set; } = "";
         public string Detail => GroupLabel.Length == 0 ? Excerpt : GroupLabel + " · " + Excerpt;
-        public string VisibilityGlyph => Note.IsLocked ? "\uE72E" : Note.Hidden ? "\uED1A" : "\uE890";
         public bool Hidden => Note.Hidden;
         public bool Pinned => Note.Pinned;
         public string Color => Note.Color;
         public string State => (Note.IsProtected ? (Note.IsLocked ? "Verrouillée · " : "Protégée · ") : "") + (Note.Hidden ? "Masquée" : "Visible") + (Note.Pinned ? " · Épinglée" : "");
         public string ToggleLabel => Note.IsLocked ? "Déverrouiller" : Note.Hidden ? "Afficher" : "Masquer";
-        private (string, string, string, bool, bool, bool, bool, bool)? previous;
+        public string ToggleToolTip => $"{ToggleLabel} la note · {State}";
+        public int CaptureCount => Note.IsProtected ? 0 : Note.Captures.Count;
+        public string CaptureSummary => CaptureCount == 0 ? "" : CaptureCount == 1 ? "1 capture" : $"{CaptureCount} captures";
+        private (string, string, string, bool, bool, bool, bool, bool, int)? previous;
         public void Refresh()
         {
-            var current = (Title, Detail, Note.Color, Note.Hidden, Note.Pinned, Note.IsProtected, Note.IsLocked, Note.Deleted);
+            var current = (Title, Detail, Note.Color, Note.Hidden, Note.Pinned, Note.IsProtected, Note.IsLocked, Note.Deleted, CaptureCount);
             if (previous == current) return;
             previous = current;
             PropertyChanged?.Invoke(this, new(null));
@@ -60,7 +62,7 @@ public partial class NotesWindow : Window
         UngroupedButton.ContextMenu = BuildGroupContextMenu(null);
         refresh.Tick += (_, _) => { refresh.Stop(); Refresh(); };
         app.NotesChanged += ScheduleRefresh;
-        Closed += (_, _) => { refresh.Stop(); app.NotesChanged -= ScheduleRefresh; };
+        Closed += (_, _) => { refresh.Stop(); app.NotesChanged -= ScheduleRefresh; CloseCaptures(); HideGallery(); };
         Refresh();
     }
     public void RefreshPrivacy() { refresh.Stop(); foreach (var row in rowCache.Values) row.Refresh(); Refresh(); }
@@ -68,8 +70,10 @@ public partial class NotesWindow : Window
     private void Refresh(HashSet<Guid>? selected = null)
     {
         RefreshGroups();
+        if (GalleryVisible) { gallery?.Refresh(); return; }
         selected ??= NoteList.SelectedItems.Cast<Row>().Select(r => r.Note.Id).ToHashSet();
-        var matches = app.Store.Notes.Where(n => MatchesGroup(n) && NoteManagement.Matches(n, SearchBox.Text, InTrash)).ToList();
+        var matches = app.Store.Notes.Where(n => MatchesGroup(n) && NoteManagement.Matches(n, SearchBox.Text, InTrash))
+            .OrderByDescending(n => n.CreatedAtUtc ?? DateTimeOffset.MinValue).ToList();
         var ids = matches.Select(n => n.Id).ToHashSet();
         var activeIds = app.Store.Notes.Select(n => n.Id).ToHashSet();
         updatingRows = true;
@@ -95,6 +99,7 @@ public partial class NotesWindow : Window
         EmptyAction.Content = searching ? "Effacer la recherche" : "Créer une note";
         EmptyAction.Visibility = !InTrash || searching ? Visibility.Visible : Visibility.Collapsed;
         updatingRows = false;
+        CaptureCountColumn.Visibility = rows.Any(r => r.CaptureCount > 0) ? Visibility.Visible : Visibility.Collapsed;
         UpdateSelection();
     }
     public void SelectImported(IEnumerable<Guid> ids)
@@ -111,13 +116,16 @@ public partial class NotesWindow : Window
         EmptyTrashButton.Visibility = InTrash ? Visibility.Visible : Visibility.Collapsed;
         EmptyTrashButton.IsEnabled = app.Store.Notes.Any(n => n.Deleted);
         VisibilityColumn.Visibility = InTrash ? Visibility.Collapsed : Visibility.Visible;
+        RefreshCapturePanel();
     }
     private List<Note> Selected() => NoteList.SelectedItems.Cast<Row>().Where(r => r.Note.Deleted == InTrash).Select(r => r.Note).ToList();
     public void SelectView(string key)
     {
+        HideGallery();
         NotesContent.Visibility = Visibility.Visible; SettingsHost.Visibility = Visibility.Collapsed;
         if (key is not ("all" or "none" or "trash") && !app.Store.Groups.Any(g => g.Id.ToString() == key)) key = "all";
         GroupKey = key;
+        CloseCaptures();
         updatingGroups = true;
         GroupList.SelectedValue = SelectedGroupId?.ToString();
         updatingGroups = false;
@@ -128,6 +136,7 @@ public partial class NotesWindow : Window
     private void TrashClick(object sender, RoutedEventArgs e) => SelectView("trash");
     private void SettingsClick(object sender, RoutedEventArgs e)
     {
+        HideGallery();
         SettingsHost.Child = new SettingsView(app);
         SettingsHost.Visibility = Visibility.Visible; NotesContent.Visibility = Visibility.Collapsed;
         NoteList.UnselectAll();
@@ -163,7 +172,7 @@ public partial class NotesWindow : Window
     private void SearchChanged(object sender, TextChangedEventArgs e) { if (initialized) Refresh([]); }
     private void SelectAllClick(object sender, RoutedEventArgs e) { NoteList.SelectAll(); }
     private void ClearClick(object sender, RoutedEventArgs e) { NoteList.UnselectAll(); }
-    public Guid? NewNoteGroupId => SettingsHost.Visibility == Visibility.Visible ? null : SelectedGroupId;
+    public Guid? NewNoteGroupId => SettingsHost.Visibility == Visibility.Visible || GalleryVisible ? null : SelectedGroupId;
     private void NewClick(object sender, RoutedEventArgs e) => app.NewNote(groupId: NewNoteGroupId);
     private void ShowClick(object sender, RoutedEventArgs e) => app.ShowNotes(Selected());
     private void HideClick(object sender, RoutedEventArgs e) => app.HideNotes(Selected());
@@ -203,17 +212,18 @@ public partial class NotesWindow : Window
         AllCount.Text = app.Store.Notes.Count(n => !n.Deleted).ToString();
         UngroupedCount.Text = app.Store.Notes.Count(n => !n.Deleted && n.GroupId == null).ToString();
         TrashCount.Text = app.Store.Notes.Count(n => n.Deleted).ToString();
+        GalleryCount.Text = app.Store.Notes.Where(n => !n.Deleted && !n.IsProtected).Sum(n => n.Captures.Count).ToString();
         if (SelectedGroupId != null && !choices.Any(g => g.Key == GroupKey)) GroupKey = "none";
         var settingsActive = SettingsHost.Visibility == Visibility.Visible;
-        foreach (var (button, key) in new[] { (AllNotesButton, "all"), (UngroupedButton, "none"), (TrashButton, "trash"), (SettingsButton, "settings") })
+        foreach (var (button, key) in new[] { (AllNotesButton, "all"), (UngroupedButton, "none"), (TrashButton, "trash"), (SettingsButton, "settings"), (GalleryButton, "gallery") })
         {
-            var selected = settingsActive ? key == "settings" : GroupKey == key;
+            var selected = settingsActive ? key == "settings" : GalleryVisible ? key == "gallery" : GroupKey == key;
             button.Background = selected ? new SolidColorBrush(Color.FromRgb(234, 241, 255)) : Brushes.Transparent;
             button.Foreground = selected ? new SolidColorBrush(Color.FromRgb(36, 91, 196)) : new SolidColorBrush(Color.FromRgb(36, 38, 41));
         }
         updatingGroups = true;
         if (GroupList.ItemsSource is not List<GroupChoice> current || !current.SequenceEqual(choices)) GroupList.ItemsSource = choices;
-        GroupList.SelectedValue = settingsActive ? null : SelectedGroupId?.ToString();
+        GroupList.SelectedValue = settingsActive || GalleryVisible ? null : SelectedGroupId?.ToString();
         updatingGroups = false;
     }
 
@@ -361,6 +371,7 @@ public partial class NotesWindow : Window
             Add("Mettre à la corbeille", () => app.DeleteNotes(selection), selection.Count > 0);
         }
         menu.Items.Add(new Separator());
+        Add("Captures…", () => ShowCaptures(selection[0]), selection.Count == 1 && !selection[0].IsProtected);
         Add("Tout sélectionner", () => NoteList.SelectAll(), rows.Count > 0);
         Add("Désélectionner", () => NoteList.UnselectAll(), selection.Count > 0);
         Add("Verrouiller toutes les notes protégées", app.LockProtectedNotes, app.Store.Notes.Any(n => n.IsProtected && !n.IsLocked));

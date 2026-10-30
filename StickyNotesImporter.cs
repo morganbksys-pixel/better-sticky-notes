@@ -56,9 +56,10 @@ public static partial class StickyNotesImporter
             if (string.IsNullOrWhiteSpace(text)) { empty++; continue; }
             var title = text.Split('\n').FirstOrDefault(line => !string.IsNullOrWhiteSpace(line))?.Trim() ?? "Note importée";
             if (title.Length > 80) title = title[..80] + "…";
-            notes.Add(new Note { Title = title, Text = text, Color = MapColor(Value("Theme")), WindowsStickyNoteId = id, Hidden = true });
+            notes.Add(new Note { Title = title, Text = text, Color = MapColor(Value("Theme")), WindowsStickyNoteId = id, Hidden = true,
+                CreatedAtUtc = ParseCreationDate(Value("CreationDate")) ?? ParseCreationDate(Value("CreatedAt")) ?? ParseCreationDate(Value("CreatedAtTimestamp")) });
         }
-        return new(notes, duplicates, deleted, empty);
+        return new(notes.OrderBy(n => n.CreatedAtUtc ?? DateTimeOffset.MinValue).ToList(), duplicates, deleted, empty);
     }
 
     private static StickyImportResult ReadOneNote(SqliteConnection connection, HashSet<string> seen)
@@ -99,10 +100,26 @@ public static partial class StickyNotesImporter
             if (string.IsNullOrWhiteSpace(body) && title.Length == 0) { empty++; continue; }
             if (title.Length == 0) title = lines.FirstOrDefault(l => !string.IsNullOrWhiteSpace(l))?.Trim() ?? "Note importée";
             if (title.Length > 80) title = title[..80] + "…";
-            notes.Add(new Note { Title = title, Text = body, Color = MapColor(String(root, "color")), WindowsStickyNoteId = id, Hidden = true });
+            notes.Add(new Note { Title = title, Text = body, Color = MapColor(String(root, "color")), WindowsStickyNoteId = id, Hidden = true,
+                CreatedAtUtc = ParseCreationDate(DateValue(root, "createdAt")) ?? ParseCreationDate(DateValue(root, "createdTime"))
+                    ?? ParseCreationDate(DateValue(root, "creationDate")) ?? ParseCreationDate(DateValue(root, "creationDateTime")) });
         }
-        return new(notes, duplicates, deleted, empty);
+        return new(notes.OrderBy(n => n.CreatedAtUtc ?? DateTimeOffset.MinValue).ToList(), duplicates, deleted, empty);
     }
+    private static DateTimeOffset? ParseCreationDate(string raw)
+    {
+        DateTimeOffset date;
+        if (long.TryParse(raw, out var number))
+        {
+            try { date = number >= DateTime.UnixEpoch.Ticks ? new DateTimeOffset(number, TimeSpan.Zero) : DateTimeOffset.FromUnixTimeMilliseconds(number); }
+            catch (ArgumentOutOfRangeException) { return null; }
+        }
+        else if (!DateTimeOffset.TryParse(raw, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal, out date)) return null;
+        return date >= DateTimeOffset.UnixEpoch && date <= DateTimeOffset.UtcNow.AddDays(1) ? date.ToUniversalTime() : null;
+    }
+    private static string DateValue(JsonElement element, string name) => element.TryGetProperty(name, out var value)
+        ? value.ValueKind == JsonValueKind.String ? value.GetString()! : value.ValueKind == JsonValueKind.Number ? value.GetRawText() : "" : "";
     private static string String(JsonElement element, string name) => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString()! : "";
     private static JsonDocument ParseOneNote(string raw)
     {

@@ -34,9 +34,12 @@ public partial class NoteWindow : Window
         Left = note.Left; Top = note.Top; Width = note.Width; Height = note.Height;
         TitleBox.Text = note.Title; Editor.Text = note.Text;
         Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title;
-        ApplyColor(note.Color); ApplyPin(); ApplyPreview();
+        ApplyColor(note.Color); ApplyPin(); ApplyCollapsed();
         TitleBox.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Title = TitleBox.Text; Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title; app.Changed(); };
-        Editor.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Text = Editor.Text; app.Changed(); };
+        Editor.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Text = Editor.Text; app.Changed(); RefreshFind(); UpdateCaptureLayout(); };
+        Editor.SizeChanged += (_, _) => UpdateCaptureLayout();
+        Previewer.SizeChanged += (_, _) => UpdateCaptureLayout();
+        InitializeFind();
         LocationChanged += (_, _) => { if (draggingHeader && !note.Preview) SetPreview(true); SaveBounds(); }; SizeChanged += (_, _) => SaveBounds();
         Loaded += (_, _) => {
             ready = true; EnsureVisibleOnScreen(); SaveBounds();
@@ -52,6 +55,7 @@ public partial class NoteWindow : Window
         {
             if (e.Key == Key.F2 && Keyboard.Modifiers == ModifierKeys.None) { if (!e.IsRepeat) BeginTitleEdit(); e.Handled = true; return; }
             if (e.Key == Key.Escape && TitleBox.Visibility == Visibility.Visible) { CancelTitleEdit(); e.Handled = true; return; }
+            if (HandleNoteToolsKey(e)) return;
             if (Keyboard.Modifiers != ModifierKeys.Control) return;
             if (!note.Preview && Editor.IsKeyboardFocusWithin && e.Key is Key.B or Key.I or Key.K)
             {
@@ -68,7 +72,7 @@ public partial class NoteWindow : Window
         // Let menu actions and activation changes finish before replacing the editor.
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
         {
-            if (!ready || !IsVisible || clearingSensitiveContent || note.Preview || IsActive) return;
+            if (!ready || !IsVisible || clearingSensitiveContent || note.Preview || IsActive || app.IsCapturing) return;
             var foreground = GetForegroundWindow();
             var handle = new WindowInteropHelper(this).Handle;
             // Menus/popups belong to this native window. A different app or note does not.
@@ -78,10 +82,11 @@ public partial class NoteWindow : Window
     }
     private void SaveBounds()
     {
-        if (!ready || WindowState != WindowState.Normal) return;
-        if (note.HasPlacement == true && note.Left == Left && note.Top == Top && note.Width == ActualWidth && note.Height == ActualHeight) return;
+        if (!ready || adjustingBounds || WindowState != WindowState.Normal) return;
+        var height = note.Collapsed ? note.Height : ActualHeight;
+        if (note.HasPlacement == true && note.Left == Left && note.Top == Top && note.Width == ActualWidth && note.Height == height) return;
         note.HasPlacement = true;
-        note.Left = Left; note.Top = Top; note.Width = ActualWidth; note.Height = ActualHeight; app.Changed(listChanged: false);
+        note.Left = Left; note.Top = Top; note.Width = ActualWidth; note.Height = height; app.Changed(listChanged: false);
     }
     public void EnsureVisibleOnScreen()
     {
@@ -101,7 +106,11 @@ public partial class NoteWindow : Window
         try { NoteSurface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); note.Color = color; }
         catch { NoteSurface.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFF1A8")); note.Color = "#FFF1A8"; }
     }
-    private void ClipSurface(object sender, SizeChangedEventArgs e) => ((UIElement)sender).Clip = new RectangleGeometry(new Rect(e.NewSize), 13, 13);
+    private void ClipSurface(object sender, SizeChangedEventArgs e)
+    {
+        ((UIElement)sender).Clip = new RectangleGeometry(new Rect(e.NewSize), 13, 13);
+        UpdateCaptureLayout();
+    }
     private void BeginTitleEdit()
     {
         if (TitleBox.Visibility == Visibility.Visible) return;
@@ -145,6 +154,8 @@ public partial class NoteWindow : Window
     public void ClearSensitiveContent()
     {
         clearingSensitiveContent = true;
+        ClearCaptureViews(); CaptureStrip.Visibility = Visibility.Collapsed;
+        CloseFind();
         Editor.IsUndoEnabled = false; TitleBox.IsUndoEnabled = false;
         Editor.Clear(); TitleBox.Clear(); Title = "Note protégée";
         Previewer.Document = null; renderedText = null; pendingEditorState = null;
@@ -179,11 +190,13 @@ public partial class NoteWindow : Window
     public void HideForCache()
     {
         note.Hidden = true;
+        ClearCaptureViews();
+        CloseFind();
         if (markdownHelp != null) markdownHelp.IsOpen = false;
         Hide(); Previewer.Document = null; renderedText = null;
         SpellCheck.SetIsEnabled(Editor, false);
     }
-    public void ClosePermanently() { ready = false; allowClose = true; if (markdownHelp != null) markdownHelp.IsOpen = false; Close(); }
+    public void ClosePermanently() { ready = false; allowClose = true; ClearCaptureViews(); CloseFind(); if (markdownHelp != null) markdownHelp.IsOpen = false; Close(); }
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         if (allowClose) return;
@@ -200,7 +213,7 @@ public partial class NoteWindow : Window
         try { DragMove(); } catch (InvalidOperationException) { }
         finally { draggingHeader = false; }
     }
-    private void TogglePreview(object sender, RoutedEventArgs e) => SetPreview(!note.Preview);
+    private void TogglePreview(object sender, RoutedEventArgs e) { SetCollapsed(false); SetPreview(!note.Preview); }
     private void SetPreview(bool preview)
     {
         var changed = note.Preview != preview;
@@ -230,15 +243,17 @@ public partial class NoteWindow : Window
     }
     private void ApplyPreview()
     {
-        EditingBar.Visibility = note.Preview ? Visibility.Collapsed : Visibility.Visible;
+        EditingBar.Visibility = note.Preview || note.Collapsed ? Visibility.Collapsed : Visibility.Visible;
         if (markdownHelp != null) markdownHelp.IsOpen = false;
-        Editor.Visibility = note.Preview ? Visibility.Collapsed : Visibility.Visible;
-        Previewer.Visibility = note.Preview ? Visibility.Visible : Visibility.Collapsed;
+        Editor.Visibility = note.Preview || note.Collapsed ? Visibility.Collapsed : Visibility.Visible;
+        Previewer.Visibility = note.Preview && !note.Collapsed ? Visibility.Visible : Visibility.Collapsed;
         // The built-in spelling menu takes focus and handles its own opening event.
         // Keep spelling errors valid for the entire editing session.
-        SpellCheck.SetIsEnabled(Editor, IsVisible && !note.Preview);
-        if (note.Preview && IsVisible && renderedText != note.Text) { Previewer.Document = MarkdownView.Render(note.Text, ToggleTask); renderedText = note.Text; }
-        else if (!note.Preview && IsActive) Editor.Focus();
+        SpellCheck.SetIsEnabled(Editor, IsVisible && !note.Preview && !note.Collapsed);
+        if (note.Preview && !note.Collapsed && IsVisible && renderedText != note.Text) { Previewer.Document = MarkdownView.Render(note.Text, ToggleTask); renderedText = note.Text; }
+        else if (!note.Preview && !note.Collapsed && IsActive && !FindBox.IsKeyboardFocusWithin) Editor.Focus();
+        RefreshFind();
+        RefreshCaptures();
     }
     private void ToggleTask(int offset, bool check)
     {
@@ -253,6 +268,10 @@ public partial class NoteWindow : Window
         create.Click += NewNote; menu.Items.Add(create);
         var rename = new MenuItem { Header = "Renommer la note", InputGestureText = "F2", Icon = MenuIcon("\uE70F") };
         rename.Click += (_, _) => Dispatcher.BeginInvoke(BeginTitleEdit); menu.Items.Add(rename);
+        var capture = new MenuItem { Header = "Capturer cet écran", InputGestureText = "Ctrl+Maj+S", Icon = MenuIcon("\uE722"), IsEnabled = !note.IsProtected && !app.IsCapturing,
+            ToolTip = note.IsProtected ? "Les captures ne sont pas disponibles dans les notes protégées." : "Capturer l’écran de ce post-it et joindre l’image à la note." };
+        ToolTipService.SetShowOnDisabled(capture, true);
+        capture.Click += CaptureScreenClick; menu.Items.Add(capture);
         var colors = new MenuItem { Header = "Couleur", Icon = MenuIcon("\uE790") };
         foreach (var (name, color) in new[] { ("Jaune", "#FFF1A8"), ("Bleu", "#CDE9FA"), ("Vert", "#D9EEC4"), ("Rose", "#FAD8E3"), ("Violet", "#E6DDF7") })
         {
@@ -262,6 +281,12 @@ public partial class NoteWindow : Window
         menu.Items.Add(colors);
         menu.Items.Add(app.BuildGroupMenu([note]));
         var protect = new MenuItem { Header = note.IsProtected ? "Verrouiller" : "Protéger par mot de passe…", Icon = MenuIcon("\uE72E") };
+        if (!note.IsProtected && note.Captures.Count > 0)
+        {
+            protect.IsEnabled = false;
+            protect.ToolTip = "Retirez les captures avant de protéger cette note. Les images ne sont pas chiffrées dans cette version.";
+            ToolTipService.SetShowOnDisabled(protect, true);
+        }
         protect.Click += (_, _) => { if (note.IsProtected) app.LockNote(note); else app.ProtectNote(note); };
         menu.Items.Add(protect);
         if (note.IsProtected)

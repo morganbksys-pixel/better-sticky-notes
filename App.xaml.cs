@@ -122,7 +122,7 @@ public partial class App : System.Windows.Application
     }
     public void NewNote(string title = "", string text = "", Guid? groupId = null)
     {
-        var note = new Note { Title = title, Text = text, GroupId = Store.Groups.Any(g => g.Id == groupId) ? groupId : null };
+        var note = new Note { Title = title, Text = text, CreatedAtUtc = DateTimeOffset.UtcNow, GroupId = Store.Groups.Any(g => g.Id == groupId) ? groupId : null };
         Store.Notes.Add(note); Open(note);
         Changed();
     }

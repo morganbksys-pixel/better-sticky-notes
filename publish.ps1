@@ -16,6 +16,7 @@ if ((Test-Path -LiteralPath $output) -and ((Get-Item -LiteralPath $output).Attri
 dotnet publish BetterStickyNotes.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None --ignore-failed-sources -o $output
 if ($LASTEXITCODE -ne 0) { throw 'Échec de la publication.' }
 Copy-Item -LiteralPath README.md -Destination (Join-Path $output 'README.md')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs') -Destination $output -Recurse -Force
 Compress-Archive -Path (Join-Path $output '*') -DestinationPath $archive -Force
 
 # Retain at most three distinct versions, counting folders and ZIPs together.

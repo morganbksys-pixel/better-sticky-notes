@@ -22,6 +22,11 @@ public partial class App
     public void ProtectNote(Note note)
     {
         if (note.IsProtected) return;
+        if (note.Captures.Count > 0)
+        {
+            AppDialog.Show("Retirez les captures avant de protéger cette note. Les images ne sont pas chiffrées dans cette version.", "Protection indisponible");
+            return;
+        }
         var key = RequestProtectionKey(null, out var salt);
         if (key == null) return;
         try { NoteProtection.Protect(note, key, salt); }
@@ -112,6 +117,7 @@ public partial class App
         foreach (var note in notes.Where(n => n.Deleted).ToList())
         {
             if (note.IsProtected) LockNote(note);
+            Store.DeleteCaptureFiles(note);
             Store.Notes.Remove(note);
         }
         Store.SanitizeBackup = true;

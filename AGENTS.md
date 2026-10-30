@@ -34,7 +34,7 @@ Tests use a custom STA assertion runner, not xUnit/NUnit. Add `tests/*Tests.cs` 
 
 ## Product Behavior
 
-Manual launch, relaunch, and tray double-click open **Mes notes**. Windows startup uses `--background`. Tray single-click does nothing; its icon stays yellow. List double-click reveals only the targeted note without changing pinning. Preserve native multi-selection. Locked notes remain anonymous and excluded from nonempty searches; unlocked protected notes show their title/content and participate in search, with an unlocked indicator. Relocking immediately anonymizes lists and refreshes search. The note's × button hides it without deleting it and relocks protected notes. Screenshot capture is deferred pending a separate request.
+Manual launch, relaunch, and tray double-click open **Mes notes**. Windows startup uses `--background`. Tray single-click does nothing; its icon stays yellow. List double-click reveals only the targeted note without changing pinning. Preserve native multi-selection. Locked notes remain anonymous and excluded from nonempty searches; unlocked protected notes show their title/content and participate in search, with an unlocked indicator. Relocking immediately anonymizes lists and refreshes search. The note's hide button (crossed-out eye) hides it without deleting it and relocks protected notes. Screenshots attach to active, unprotected notes as local PNG files; remove their files only after successfully saving the updated references.
 
 ## Versions and Delivery
 

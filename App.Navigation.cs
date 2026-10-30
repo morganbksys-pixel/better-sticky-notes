@@ -46,6 +46,7 @@ public partial class App
         Open(note, activate: false);
         // A cancelled password prompt must not expose or activate the note.
         if (note.IsLocked || note.Hidden || !windows.TryGetValue(note.Id, out var window)) return;
+        window.SetCollapsed(false);
         window.Activate();
         SetForegroundWindow(new WindowInteropHelper(window).Handle);
     }

@@ -9,18 +9,43 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        if (args.FirstOrDefault() == "--quiet-ui")
+        if (args.FirstOrDefault() is "--quiet-ui" or "--note-tools" or "--captures")
         {
             var data = Path.Combine(Path.GetTempPath(), "BetterStickyNotes-quiet-" + Guid.NewGuid());
             var quietApp = new App(false, data); quietApp.InitializeComponent(); quietApp.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             try
             {
+                if (args[0] == "--captures")
+                {
+                    ScreenCaptureTests.Run(quietApp, data);
+                    CaptureManagementTests.Run(quietApp, data);
+                    CaptureExperienceTests.Run(quietApp);
+                    ScreenCaptureTests.RunWindows(quietApp);
+                    CaptureManagementTests.RunWindows(quietApp);
+                    CaptureExperienceTests.RunWindows(quietApp);
+                    quietApp.Store.Save();
+                    Console.WriteLine("Vérifications des captures réussies. Pixels synthétiques uniquement, aucune capture réelle du bureau.");
+                    return;
+                }
+                if (args[0] == "--note-tools")
+                {
+                    NoteToolsTests.Run(quietApp, data);
+                    NoteToolsTests.RunWindows(quietApp);
+                    quietApp.Store.Save();
+                    Console.WriteLine("Vérifications des outils de notes réussies (fenêtres de test transparentes).");
+                    return;
+                }
                 ContextMenuTests.Run(quietApp, data);
                 GroupContextTests.Run(quietApp);
                 ManagementLayoutTests.Run(quietApp);
                 PresentationTests.Run(quietApp, data);
                 UiPolishTests.Run(quietApp);
                 HomeTests.Run(quietApp);
+                NoteOrderTests.Run(quietApp, data);
+                NoteToolsTests.Run(quietApp, data);
+                ScreenCaptureTests.Run(quietApp, data);
+                CaptureManagementTests.Run(quietApp, data);
+                CaptureExperienceTests.Run(quietApp);
                 quietApp.Store.Save();
                 Console.WriteLine("Vérifications sans affichage réussies. Aucun Show, ShowDialog ou Activate.");
             }
@@ -66,7 +91,16 @@ internal static class Program
             ProtectionTests.Run(app, folder);
             FocusTests.Run(app);
             EditingTests.Run();
+            NoteToolsTests.Run(app, folder);
+            NoteToolsTests.RunWindows(app);
+            ScreenCaptureTests.Run(app, folder);
+            CaptureManagementTests.Run(app, folder);
+            CaptureExperienceTests.Run(app);
+            ScreenCaptureTests.RunWindows(app);
+            CaptureManagementTests.RunWindows(app);
+            CaptureExperienceTests.RunWindows(app);
             ImportTests.Run(folder);
+            NoteOrderTests.Run(app, folder);
             var trayMenu = app.BuildTrayMenu();
             Assert(trayMenu.Items.OfType<MenuItem>().Select(i => i.Header.ToString()).SequenceEqual(new[] { "Nouvelle note", "Mes notes", "Quitter" }), "Menu système minimal");
             var window = new NoteWindow(app, new Note { Title = "Mes idées du jour", Text = markdown, Preview = true, Pinned = true });

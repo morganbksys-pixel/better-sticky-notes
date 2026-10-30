@@ -2,7 +2,7 @@
 
 [Retour au README](../README.md)
 
-Ce document décrit les choix techniques et les limites de l’application. Le repli, la recherche dans un post-it et les captures d’écran décrits ici correspondent à des évolutions locales en cours d’intégration ; ils peuvent être absents du code publié et de la dernière version téléchargeable.
+Ce document décrit les choix techniques et les limites de l’application publiée en version **0.21.4**, dont le repli, la recherche dans un post-it et les captures d’écran.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ Application Windows 10/11 en C# / .NET 10 et WPF, publiée pour Windows x64. Mar
 | [NoteProtection.cs](../NoteProtection.cs) | Dérivation de clé et chiffrement |
 | [MarkdownView.cs](../MarkdownView.cs), [MarkdownEditing.cs](../MarkdownEditing.cs) | Rendu WPF et outils d’édition Markdown |
 | [StickyNotesImporter.cs](../StickyNotesImporter.cs) | Lecture des bases Sticky Notes et OneNote |
-| `ScreenCapture.cs`, `NoteStore.Captures.cs` (évolutions locales) | Capture d’écran et stockage des PNG |
+| [ScreenCapture.cs](../ScreenCapture.cs), [NoteStore.Captures.cs](../NoteStore.Captures.cs) | Capture d’écran et stockage des PNG |
 | [tests/](../tests/) | Suite de régression avec exécution STA |
 
 ## Stockage et compatibilité
@@ -81,6 +81,8 @@ Le lecteur propose un ajustement à la fenêtre, un affichage à 100 %, un zoom 
 
 La galerie référence les images existantes sans les dupliquer. Dans la corbeille, leur consultation et leur export restent possibles ; il faut restaurer la note pour modifier ses captures. Le repli de la section des captures est enregistré séparément du repli du post-it.
 
+Les boutons **Notes actives / Corbeille** filtrent la galerie. La sélection multiple utilise les conventions Windows : Ctrl+clic, Maj+clic, flèches, Ctrl+A et Échap. Entrée ouvre une capture ; Ctrl+C copie une image ou les fichiers sélectionnés ; Ctrl+S enregistre une image ou exporte la sélection dans un dossier sans écraser les fichiers existants. Suppr demande confirmation du nombre de captures, puis retire uniquement les images, en conservant les notes. Une actualisation conserve la sélection ; changer de filtre l’efface.
+
 ## Import Sticky Notes / OneNote
 
 La détection recherche ces bases et propose la plus récemment modifiée :
@@ -101,6 +103,8 @@ Fermer Sticky Notes / OneNote avant l’import. Pour travailler sur une copie de
 Le lancement manuel et la relance ouvrent **Mes notes**, sans restaurer les post-it. Une seconde instance réveille la fenêtre de gestion de l’instance active. Le démarrage Windows utilise `--background` via l’entrée `BetterStickyNotes` de `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, sans droits administrateur. Une entrée existante est actualisée vers le chemin du nouvel exécutable lors du lancement ; l’option reste facultative.
 
 Les ouvertures de groupes sont progressives pour laisser l’interface répondre. Le double-clic dans la liste révèle et déplie uniquement la note ciblée, sans changer son épinglage. Les déplacements ne reconstruisent pas la liste.
+
+Mes notes affiche les notes datées de la plus récente à la plus ancienne. Les anciennes notes sans date restent ensuite dans leur ordre enregistré. Les nouvelles notes enregistrent leur date de création ; les imports conservent celle de la source lorsqu’elle est disponible. L’œil ouvert indique une note visible, l’œil barré une note masquée ; un cadenas unique remplace cet indicateur pour les notes protégées. Le bouton de masquage du post-it et les menus utilisent la même paire d’yeux.
 
 Les aperçus Markdown sont libérés au masquage. Le cache retient au maximum cinq fenêtres masquées, pendant environ une minute ; le nettoyage périodique ferme ensuite leurs contrôles. Le texte, la position, le curseur et la sélection sont conservés pour la réouverture. **L’historique Ctrl+Z est perdu lorsqu’une fenêtre sort du cache.** Les notes protégées sont fermées et nettoyées dès leur verrouillage.
 

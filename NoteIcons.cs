@@ -9,8 +9,8 @@ public static class NoteIcons
     public static TextBlock Glyph(string glyph, double size = 14) => new() { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = size, VerticalAlignment = VerticalAlignment.Center };
     public static FrameworkElement? Action(string label)
     {
-        if (label.StartsWith("Afficher", StringComparison.Ordinal)) return Glyph("\uE890");
-        if (label.StartsWith("Masquer", StringComparison.Ordinal)) return Glyph("\uED1A");
+        if (label.StartsWith("Afficher", StringComparison.Ordinal)) return new NoteVisibilityIcon();
+        if (label.StartsWith("Masquer", StringComparison.Ordinal)) return new NoteVisibilityIcon { IsHidden = true };
         if (label.StartsWith("Supprimer", StringComparison.Ordinal) || label.StartsWith("Vider", StringComparison.Ordinal) || label == "Mettre à la corbeille") return Glyph("\uE74D");
         if (label.StartsWith("Renommer", StringComparison.Ordinal)) return Glyph("\uE70F");
         return label switch
@@ -23,6 +23,7 @@ public static class NoteIcons
             "Purge automatique…" => Glyph("\uE713"),
             "Verrouiller toutes les notes protégées" => Glyph("\uE72E"),
             "Nouveau groupe…" => Glyph("\uE710"),
+            "Captures…" => Glyph("\uE722"),
             _ => null
         };
     }

@@ -24,7 +24,7 @@ internal static class UiPolishTests
         var tools = ((StackPanel)window.FindName("EditingBar")).Children.OfType<Button>().ToList();
         Check(tools.Take(2).Select(b => b.Content).SequenceEqual(new object[] { "B", "I" }) && tools.Skip(2).All(b => b.Content is TextBlock { FontFamily.Source: "Segoe MDL2 Assets" }), "Barre Markdown : B / I conservés et autres outils Windows");
         var typeface = new Typeface("Segoe MDL2 Assets");
-        Check(typeface.TryGetGlyphTypeface(out var glyphs) && "\uE713\uE710\uE712\uE718\uE77A\uE711\uE72E\uE785\uE8B7\uE8FD\uE73A\uE71B\uE943\uE897\uE921\uE922\uE784".All(c => glyphs.CharacterToGlyphMap.ContainsKey(c)), "Tous les pictogrammes proposés existent dans la police Windows");
+        Check(typeface.TryGetGlyphTypeface(out var glyphs) && "\uE713\uE710\uE712\uE718\uE77A\uE711\uE72E\uE785\uE8B7\uE8FD\uE73A\uE71B\uE943\uE897\uE921\uE922\uE784\uE8B9".All(c => glyphs.CharacterToGlyphMap.ContainsKey(c)), "Tous les pictogrammes proposés existent dans la police Windows");
         window.ClosePermanently();
         var group = app.CreateGroup("Test"); app.Store.Notes.Add(note);
         var manager = new NotesWindow(app);

@@ -16,7 +16,7 @@ internal static class PresentationTests
         var manager = new NotesWindow(app);
         var list = (DataGrid)manager.FindName("NoteList");
         var row = (NotesWindow.Row)list.Items[0];
-        Check(row.Title == note.Title && row.Excerpt == note.Text && row.ProtectionMarker == "\uE785", "Déverrouillée : titre, contenu et cadenas ouvert dans la liste");
+        Check(row.Title == note.Title && row.Excerpt == note.Text && row.ProtectionMarker == "\uE785", "Déverrouillée : titre, contenu et cadenas ouvert à la place de l’œil");
         var search = (TextBox)manager.FindName("SearchBox"); search.Text = "DETAIL";
         Check(list.Items.Count == 1, "Recherche sans accents dans une note déverrouillée");
         app.Store.Save();
@@ -32,7 +32,7 @@ internal static class PresentationTests
         note.Deleted = false; NoteProtection.Unlock(note, key);
         var window = new NoteWindow(app, note);
         var close = (Button)window.FindName("HideButton");
-        Check(close.ToolTip.ToString()!.StartsWith("Fermer la note"), "Croix de fermeture : action de masquage explicite");
+        Check(close.ToolTip.ToString()!.StartsWith("Masquer la note"), "Œil barré du post-it : action de masquage explicite");
         close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Check(note.Hidden && note.IsLocked && !note.Deleted && app.Store.Notes.Contains(note), "Fermer masque et verrouille sans supprimer");
         window.ClosePermanently();

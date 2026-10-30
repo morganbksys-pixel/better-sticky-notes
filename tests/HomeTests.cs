@@ -43,6 +43,11 @@ internal static class HomeTests
         scroll.Measure(new Size(12, 200)); scroll.Arrange(new Rect(0, 0, 12, 200)); scroll.ApplyTemplate();
         var track = (Track)scroll.Template.FindName("PART_Track", scroll);
         Check(scroll.Width == 12 && track.Thumb.MinHeight == 24 && track.Value == 40, "Barre fine avec zone de prise élargie et suivi de la position");
+        var horizontal = new ScrollBar { Style = editorStyle, Orientation = Orientation.Horizontal, Maximum = 100, ViewportSize = 20, Value = 40 };
+        horizontal.Measure(new Size(200, 12)); horizontal.Arrange(new Rect(0, 0, 200, 12)); horizontal.ApplyTemplate();
+        var horizontalTrack = (Track)horizontal.Template.FindName("PART_Track", horizontal);
+        Check(horizontal.Height == 12 && double.IsNaN(horizontal.Width) && horizontalTrack.Orientation == Orientation.Horizontal && !horizontalTrack.IsDirectionReversed && horizontalTrack.Thumb.MinWidth == 24,
+            "Défilement horizontal : orientation et poignée adaptées sans barre verticale parasite");
         var begin = typeof(NoteWindow).GetMethod("BeginTitleEdit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         var cancel = typeof(NoteWindow).GetMethod("CancelTitleEdit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         begin.Invoke(noteWindow, null); ((TextBox)noteWindow.FindName("TitleBox")).Text = "Modifié"; cancel.Invoke(noteWindow, null);

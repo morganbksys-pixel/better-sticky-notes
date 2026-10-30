@@ -1,6 +1,6 @@
 # Better Sticky Notes
 
-![Better Sticky Notes : vos idées, toujours à portée de main.](docs/media/better-sticky-notes-presentation.png)
+![Better Sticky Notes : notes, Markdown et captures sur votre bureau Windows.](docs/media/better-sticky-notes-presentation.png)
 
 Des post-it pour Windows 10/11 : notes colorées, Markdown, groupes et sauvegarde automatique. Sans compte ni synchronisation réseau.
 
@@ -16,14 +16,16 @@ L’application s’ouvre sur **Mes notes**, pour créer, rechercher et organise
 
 - **Post-it personnalisables** : couleur, déplacement, redimensionnement, repli sur le titre et punaise pour rester au premier plan.
 - **Markdown** : titres, gras, italique, listes, cases à cocher interactives, liens et code. Double-cliquer sur le contenu pour le modifier.
-- **Organisation** : groupes colorés, recherche dans les titres et contenus, sélection multiple et actions par clic droit.
-- **Captures d’écran** : joindre l’écran du post-it à une note, consulter les images avec zoom ou les retrouver dans la galerie **Captures**. La petite poignée centrale du bas déplie ou replie les vignettes.
+- **Organisation** : groupes colorés, recherche dans les titres et contenus, sélection multiple et actions par clic droit. Les nouvelles notes apparaissent en haut, de la plus récente à la plus ancienne selon leur date de création. Les anciennes notes sans date restent après les notes datées et conservent leur ordre enregistré.
+- **Captures d’écran** : joindre l’écran du post-it à une note, consulter les images avec zoom ou les retrouver dans la galerie **Captures**. La petite poignée centrale du bas déplie ou replie les vignettes ; la molette et les flèches permettent de les parcourir sans barre de défilement visible.
 - **Protection par mot de passe** : chiffrer le titre et le contenu des notes confidentielles.
 - **Corbeille** : restaurer les notes supprimées ou les effacer définitivement après confirmation. La purge automatique est facultative et désactivée par défaut.
 
-Le repli, la recherche dans un post-it et les captures d’écran sont des évolutions en cours d’intégration ; leur disponibilité dépend de la version téléchargée.
+Le repli, la recherche dans un post-it et la galerie de captures sont disponibles à partir de la version **0.21.4**.
 
-La croix **×** masque un post-it sans supprimer sa note. Pour retrouver **Mes notes**, relancer l’application ou double-cliquer sur son icône jaune dans la zone de notification. Le clic droit sur cette icône permet aussi de créer une note ou de quitter.
+Dans la galerie, les boutons **Notes actives / Corbeille** permettent de choisir les captures affichées. Un clic sélectionne, un double-clic ou **Entrée** ouvre l’image. **Ctrl+clic** et **Maj+clic** sélectionnent plusieurs captures ; les **flèches** déplacent la sélection. **Ctrl+A** sélectionne tout, **Échap** désélectionne, **Ctrl+C** copie l’image (ou les fichiers si plusieurs), **Ctrl+S** enregistre et **Suppr** retire les captures après confirmation. L’export multiple choisit un dossier sans écraser ses fichiers. Les captures de la corbeille restent consultables et exportables. Dans la visionneuse, **Ctrl+molette** zoome et **← / →** parcourt les captures en boucle.
+
+Le bouton **œil barré** masque un post-it sans supprimer sa note. Dans Mes notes, un **œil ouvert** indique une note visible et un **œil barré** une note masquée ; l’infobulle précise l’action au clic. Les menus des notes et des groupes utilisent les mêmes icônes. Pour retrouver **Mes notes**, relancer l’application ou double-cliquer sur son icône jaune dans la zone de notification. Le clic droit sur cette icône permet aussi de créer une note ou de quitter.
 
 Dans **Mes notes → Paramètres**, l’option **Démarrer avec Windows** lance l’application en arrière-plan, sans ouvrir de fenêtre. Elle est désactivée par défaut.
 
@@ -55,6 +57,7 @@ Pour sauvegarder ou transférer vos notes, **quitter l’application puis copier
 
 - Le menu **⋯ → Protéger par mot de passe…** utilise un mot de passe commun aux notes protégées. **Un mot de passe oublié ne peut pas être récupéré.**
 - Les notes protégées se reverrouillent lorsqu’elles sont masquées, à la fermeture de leur fenêtre et au verrouillage de Windows. Verrouillées, elles restent anonymes et sont exclues des recherches non vides.
+- Dans Mes notes, un seul cadenas remplace l’œil pour les notes protégées : fermé si la note est verrouillée, ouvert si elle est déverrouillée.
 - Le titre et le contenu protégés sont chiffrés avec AES-256-GCM. Les métadonnées, dont les noms de groupes, restent lisibles. Les anciennes copies externes peuvent encore contenir du texte en clair.
 - Les captures ne sont pas chiffrées : elles sont indisponibles dans les notes protégées et doivent être retirées avant de protéger une note.
 

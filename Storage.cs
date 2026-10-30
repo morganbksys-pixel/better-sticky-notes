@@ -7,6 +7,8 @@ namespace BetterStickyNotes;
 public sealed class Note
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    // Legacy files have no creation date; preserve their recorded order.
+    public DateTimeOffset? CreatedAtUtc { get; set; }
     public Guid? GroupId { get; set; }
     public string Title { get; set; } = "";
     public string Text { get; set; } = "";
@@ -20,6 +22,9 @@ public sealed class Note
     public bool Deleted { get; set; }
     public DateTimeOffset? DeletedAtUtc { get; set; }
     public bool Preview { get; set; } = true;
+    public bool Collapsed { get; set; }
+    public bool CapturesCollapsed { get; set; }
+    public List<NoteCapture> Captures { get; set; } = [];
     public string? WindowsStickyNoteId { get; set; }
     public bool? HasPlacement { get; set; }
     public EncryptedNote? Protection { get; set; }
@@ -30,6 +35,7 @@ public sealed class Note
     public Note Snapshot()
     {
         var snapshot = (Note)MemberwiseClone();
+        snapshot.Captures = Captures.ToList();
         if (IsProtected)
         {
             if (!IsLocked) snapshot.Protection = NoteProtection.Encrypt(this, ProtectionKey!, Protection!.Salt);
@@ -44,7 +50,7 @@ public sealed record NoteGroup(Guid Id, string Name, string Color = "#73777E")
     public static bool IsValidColor(string? color) => color is { Length: 7 } && color[0] == '#' && color.Skip(1).All(Uri.IsHexDigit);
 }
 
-public sealed class NoteStore
+public sealed partial class NoteStore
 {
     public static string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BetterStickyNotes");
     private readonly string path;
@@ -123,28 +129,32 @@ public sealed class NoteStore
         {
             var notes = json.RootElement.Deserialize<List<Note>>() ?? throw new JsonException("Fichier vide.");
             if (notes.Any(n => n == null)) throw new JsonException("Note invalide.");
+            foreach (var note in notes) ValidateCaptures(note);
             return new Document(1, notes, []);
         }
         if (json.RootElement.ValueKind != JsonValueKind.Object || !json.RootElement.TryGetProperty("Version", out _))
             throw new JsonException("Format de notes invalide.");
         var document = json.RootElement.Deserialize<Document>() ?? throw new JsonException("Fichier vide.");
-        if (document.Version != 1) throw new NotSupportedException("Version du fichier de notes non prise en charge : " + document.Version);
+        if (document.Version is not (1 or 2)) throw new NotSupportedException("Version du fichier de notes non prise en charge : " + document.Version);
         if (document.Notes == null || document.Groups == null || document.Notes.Any(n => n == null) ||
             document.Groups.Any(g => g == null || g.Id == Guid.Empty || string.IsNullOrWhiteSpace(g.Name)) ||
             document.Groups.Select(g => g.Id).Distinct().Count() != document.Groups.Count)
             throw new JsonException("Structure des notes ou groupes invalide.");
+        foreach (var note in document.Notes) ValidateCaptures(note);
         return document;
     }
     public Task SaveAsync()
     {
         // Capture immutable values on the UI thread, serialize and write on a worker.
-        var snapshot = new Document(1, Notes.Select(n => n.Snapshot()).ToList(), Groups.ToList());
+        var notes = Notes.Select(n => n.Snapshot()).ToList();
+        var snapshot = new Document(notes.Any(n => n.Captures.Count > 0) ? 2 : 1, notes, Groups.ToList());
         var sanitize = SanitizeBackup || snapshot.Notes.Any(n => n.IsProtected);
+        var removedCaptures = pendingCaptureDeletes.ToArray();
         lock (writeLock)
-            return writeTail = writeTail.ContinueWith(_ => Write(snapshot, sanitize), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+            return writeTail = writeTail.ContinueWith(_ => Write(snapshot, sanitize, removedCaptures), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
     public void Save() => SaveAsync().GetAwaiter().GetResult();
-    private void Write(Document snapshot, bool sanitize)
+    private void Write(Document snapshot, bool sanitize, string[] removedCaptures)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var temp = path + ".tmp";
@@ -159,5 +169,6 @@ public sealed class NoteStore
         }
         else if (File.Exists(path)) File.Replace(temp, path, path + ".bak");
         else File.Move(temp, path);
+        foreach (var file in removedCaptures) File.Delete(file);
     }
 }

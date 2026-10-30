@@ -17,7 +17,7 @@ internal static class NavigationTests
         Check(manager.WindowState == WindowState.Normal && app.Windows.OfType<NotesWindow>().Count() == 1 && note.Hidden, "Relance : fenêtre de gestion réutilisée et restaurée sans afficher les notes");
         app.FocusNote(note); PerformanceChecks.Pump();
         var window = app.Windows.OfType<NoteWindow>().Single();
-        Check(window.IsActive && !window.Topmost && !note.Pinned, "Retrouver une note sans activer l’épinglage");
+        Check(window.IsActive && !window.Topmost && !note.Pinned, $"Retrouver une note sans activer l’épinglage (active={window.IsActive}, premier plan permanent={window.Topmost}, épinglée={note.Pinned})");
         window.WindowState = WindowState.Minimized;
         app.FocusNote(note); PerformanceChecks.Pump();
         Check(window.WindowState == WindowState.Normal && window.IsActive, "Note réduite restaurée au premier plan");

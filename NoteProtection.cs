@@ -43,6 +43,7 @@ public static class NoteProtection
 
     public static void Protect(Note note, byte[] key, string salt)
     {
+        if (note.Captures.Count > 0) throw new InvalidOperationException("Retirez les captures avant de protéger cette note. Les images ne sont pas chiffrées dans cette version.");
         note.Protection = Encrypt(note, key, salt);
         note.ProtectionKey = key.ToArray();
     }
