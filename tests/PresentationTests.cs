@@ -38,9 +38,9 @@ internal static class PresentationTests
         window.ClosePermanently();
         var plain = new Note(); var plainWindow = new NoteWindow(app, plain);
         var pin = (Button)plainWindow.FindName("PinButton");
-        Check(pin.Content is TextBlock { Text: "\uE77A" }, "Punaise inactive Windows");
+        Check(pin.Content is NotePinIcon { IsPinned: false }, "Punaise inactive en contour");
         pin.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-        Check(plain.Pinned && plainWindow.Topmost && pin.Content is TextBlock { Text: "\uE718" }, "Punaise épinglée Windows et premier plan conservé");
+        Check(plain.Pinned && plainWindow.Topmost && pin.Content is NotePinIcon { IsPinned: true }, "Punaise pleine et premier plan conservé");
         plainWindow.ClosePermanently();
         var group = app.CreateGroup("Groupe"); app.SetGroupColor(group.Id, "#8054BA");
         var menu = app.BuildGroupMenu([note]); var entry = (MenuItem)menu.Items[1];

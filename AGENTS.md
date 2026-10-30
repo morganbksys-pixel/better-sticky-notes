@@ -14,6 +14,8 @@ Better Sticky Notes targets Windows 10/11 with C#/.NET 10 and WPF. Sources live 
 
 Use Windows and the .NET 10 SDK:
 
+Run regression tests through GitHub Actions (`.github/workflows/dotnet.yml`) by default. Do not run tests locally unless the user explicitly requests it. Add or update regression tests as needed, and let the workflow run them on push or pull request. Local builds, publishing, and `git diff --check` remain available for preparing delivery.
+
 ```powershell
 dotnet build BetterStickyNotes.csproj
 dotnet run --project BetterStickyNotes.csproj
@@ -22,7 +24,7 @@ dotnet run --project tests/SmokeTests.csproj -- --benchmark 38
 ./publish.ps1
 ```
 
-These build, launch, test, benchmark 38 notes, and publish the portable Windows x64 application. Quit the running application before testing another build.
+These build, launch, test, benchmark 38 notes, and publish the portable Windows x64 application. The test and benchmark commands above are references for explicitly requested local runs. Quit the running application before testing another build.
 
 ## Coding Conventions
 

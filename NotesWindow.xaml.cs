@@ -73,7 +73,7 @@ public partial class NotesWindow : Window
         if (GalleryVisible) { gallery?.Refresh(); return; }
         selected ??= NoteList.SelectedItems.Cast<Row>().Select(r => r.Note.Id).ToHashSet();
         var matches = app.Store.Notes.Where(n => MatchesGroup(n) && NoteManagement.Matches(n, SearchBox.Text, InTrash))
-            .OrderByDescending(n => n.CreatedAtUtc ?? DateTimeOffset.MinValue).ToList();
+            .OrderByDescending(n => n.ModifiedAtUtc ?? n.CreatedAtUtc ?? DateTimeOffset.MinValue).ToList();
         var ids = matches.Select(n => n.Id).ToHashSet();
         var activeIds = app.Store.Notes.Select(n => n.Id).ToHashSet();
         updatingRows = true;

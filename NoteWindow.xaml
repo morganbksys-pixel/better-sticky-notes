@@ -20,7 +20,7 @@
                         <Button x:Name="CollapseButton" Click="ToggleCollapsed" Width="28" Height="30" Padding="0" Background="Transparent"/>
                         <Button x:Name="CaptureScreenButton" Content="&#xE722;" FontFamily="Segoe MDL2 Assets" Click="CaptureScreenClick" Width="28" Height="30" Padding="0" FontSize="15" Background="Transparent" ToolTip="Capturer cet écran (Ctrl+Maj+S)" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Capturer cet écran"/>
                         <Button Content="&#xE712;" FontFamily="Segoe MDL2 Assets" Click="OpenMenu" Width="32" Height="30" Padding="0" FontSize="16" Background="Transparent" ToolTip="Options de la note" AutomationProperties.Name="Options de la note"/>
-                        <Button x:Name="PinButton" Click="TogglePin" Width="32" Height="30" Padding="0" ToolTip="Épingler au premier plan" AutomationProperties.Name="Épingler au premier plan"/>
+                        <Button x:Name="PinButton" Click="TogglePin" Width="32" Height="30" Padding="0" Background="Transparent" ToolTip="Épingler au premier plan" AutomationProperties.Name="Épingler au premier plan"/>
                         <Button x:Name="HideButton" Click="HideClick" Width="32" Height="30" Padding="0" Background="Transparent" ToolTip="Masquer la note — disponible dans Mes notes" AutomationProperties.Name="Masquer la note">
                             <local:NoteVisibilityIcon IsHidden="True"/>
                         </Button>

@@ -12,9 +12,8 @@ public partial class App
         try
         {
             new GroupNameDialog(owner, "Renommer la note", note.Title, title => {
-                note.Title = title;
+                UpdateNoteTitle(note, title);
                 if (windows.TryGetValue(note.Id, out var window)) window.SetTitle(title);
-                Changed();
             }, "Titre de la note", 120).ShowDialog();
         }
         finally { if (wasLocked) LockNote(note); }

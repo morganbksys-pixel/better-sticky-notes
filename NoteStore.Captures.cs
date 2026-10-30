@@ -35,6 +35,7 @@ public sealed partial class NoteStore
         }
         finally { File.Delete(file + ".tmp"); }
         note.Captures.Add(capture);
+        note.ModifiedAtUtc = DateTimeOffset.UtcNow;
         return capture;
     }
 
@@ -51,6 +52,7 @@ public sealed partial class NoteStore
     public void RemoveCapture(Note note, NoteCapture capture)
     {
         if (!note.Captures.Remove(capture)) return;
+        note.ModifiedAtUtc = DateTimeOffset.UtcNow;
         pendingCaptureDeletes.Add(CapturePath(note, capture));
         SanitizeBackup = true;
     }

@@ -9,6 +9,7 @@ public sealed class Note
     public Guid Id { get; set; } = Guid.NewGuid();
     // Legacy files have no creation date; preserve their recorded order.
     public DateTimeOffset? CreatedAtUtc { get; set; }
+    public DateTimeOffset? ModifiedAtUtc { get; set; }
     public Guid? GroupId { get; set; }
     public string Title { get; set; } = "";
     public string Text { get; set; } = "";

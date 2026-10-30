@@ -2,7 +2,7 @@
 
 [Retour au README](../README.md)
 
-Ce document décrit les choix techniques et les limites de l’application publiée en version **0.21.4**, dont le repli, la recherche dans un post-it et les captures d’écran.
+Ce document décrit les choix techniques et les limites de l’application publiée en version **0.21.6**, dont le repli, la recherche dans un post-it et les captures d’écran.
 
 ## Architecture
 
@@ -104,7 +104,7 @@ Le lancement manuel et la relance ouvrent **Mes notes**, sans restaurer les post
 
 Les ouvertures de groupes sont progressives pour laisser l’interface répondre. Le double-clic dans la liste révèle et déplie uniquement la note ciblée, sans changer son épinglage. Les déplacements ne reconstruisent pas la liste.
 
-Mes notes affiche les notes datées de la plus récente à la plus ancienne. Les anciennes notes sans date restent ensuite dans leur ordre enregistré. Les nouvelles notes enregistrent leur date de création ; les imports conservent celle de la source lorsqu’elle est disponible. L’œil ouvert indique une note visible, l’œil barré une note masquée ; un cadenas unique remplace cet indicateur pour les notes protégées. Le bouton de masquage du post-it et les menus utilisent la même paire d’yeux.
+Mes notes trie les notes par dernière modification (`ModifiedAtUtc`), ou par création (`CreatedAtUtc`) si aucune modification n’est enregistrée. Modifier le titre, le texte, une case à cocher ou les captures fait remonter la note ; les actions d’affichage, de déplacement, d’épinglage et de verrouillage conservent sa date. Les anciennes notes sans aucune date restent ensuite dans leur ordre enregistré jusqu’à leur prochaine modification. Les nouvelles notes enregistrent leur date de création ; les imports conservent celle de la source lorsqu’elle est disponible. Ces dates sont sauvegardées en UTC et restent lisibles parmi les métadonnées des notes protégées. L’œil ouvert indique une note visible, l’œil barré une note masquée ; un cadenas unique remplace cet indicateur pour les notes protégées. Le bouton de masquage du post-it et les menus utilisent la même paire d’yeux.
 
 Les aperçus Markdown sont libérés au masquage. Le cache retient au maximum cinq fenêtres masquées, pendant environ une minute ; le nettoyage périodique ferme ensuite leurs contrôles. Le texte, la position, le curseur et la sélection sont conservés pour la réouverture. **L’historique Ctrl+Z est perdu lorsqu’une fenêtre sort du cache.** Les notes protégées sont fermées et nettoyées dès leur verrouillage.
 

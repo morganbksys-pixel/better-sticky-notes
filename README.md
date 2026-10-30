@@ -14,9 +14,9 @@ L’application s’ouvre sur **Mes notes**, pour créer, rechercher et organise
 
 ## L’essentiel
 
-- **Post-it personnalisables** : couleur, déplacement, redimensionnement, repli sur le titre et punaise pour rester au premier plan.
+- **Post-it personnalisables** : couleur, déplacement, redimensionnement, repli sur le titre et punaise pour rester au premier plan. La punaise est en contour quand la note est libre et pleine quand elle est épinglée.
 - **Markdown** : titres, gras, italique, listes, cases à cocher interactives, liens et code. Double-cliquer sur le contenu pour le modifier.
-- **Organisation** : groupes colorés, recherche dans les titres et contenus, sélection multiple et actions par clic droit. Les nouvelles notes apparaissent en haut, de la plus récente à la plus ancienne selon leur date de création. Les anciennes notes sans date restent après les notes datées et conservent leur ordre enregistré.
+- **Organisation** : groupes colorés, recherche dans les titres et contenus, sélection multiple et actions par clic droit. Les notes sont triées de la plus récente à la plus ancienne selon leur dernière modification (titre, contenu, case à cocher ou ajout/suppression de capture), ou leur date de création si elles n’ont pas encore été modifiées. Créer ou modifier une note la fait remonter en haut de la liste. Les actions d’affichage, de déplacement, d’épinglage et de verrouillage ne changent pas cet ordre. Les anciennes notes sans date restent après les notes datées et conservent leur ordre enregistré jusqu’à leur prochaine modification.
 - **Captures d’écran** : joindre l’écran du post-it à une note, consulter les images avec zoom ou les retrouver dans la galerie **Captures**. La petite poignée centrale du bas déplie ou replie les vignettes ; la molette et les flèches permettent de les parcourir sans barre de défilement visible.
 - **Protection par mot de passe** : chiffrer le titre et le contenu des notes confidentielles.
 - **Corbeille** : restaurer les notes supprimées ou les effacer définitivement après confirmation. La purge automatique est facultative et désactivée par défaut.

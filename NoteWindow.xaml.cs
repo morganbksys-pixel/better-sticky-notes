@@ -35,8 +35,8 @@ public partial class NoteWindow : Window
         TitleBox.Text = note.Title; Editor.Text = note.Text;
         Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title;
         ApplyColor(note.Color); ApplyPin(); ApplyCollapsed();
-        TitleBox.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Title = TitleBox.Text; Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title; app.Changed(); };
-        Editor.TextChanged += (_, _) => { if (clearingSensitiveContent) return; note.Text = Editor.Text; app.Changed(); RefreshFind(); UpdateCaptureLayout(); };
+        TitleBox.TextChanged += (_, _) => { if (clearingSensitiveContent) return; app.UpdateNoteTitle(note, TitleBox.Text); Title = string.IsNullOrWhiteSpace(note.Title) ? "Sans titre — Better Sticky Notes" : note.Title; };
+        Editor.TextChanged += (_, _) => { if (clearingSensitiveContent) return; app.UpdateNoteText(note, Editor.Text); RefreshFind(); UpdateCaptureLayout(); };
         Editor.SizeChanged += (_, _) => UpdateCaptureLayout();
         Previewer.SizeChanged += (_, _) => UpdateCaptureLayout();
         InitializeFind();
@@ -140,9 +140,7 @@ public partial class NoteWindow : Window
     private void ApplyPin()
     {
         Topmost = note.Pinned;
-        PinButton.Content = NoteIcons.Glyph(note.Pinned ? "\uE718" : "\uE77A", 18);
-        PinButton.Background = note.Pinned ? new SolidColorBrush(Color.FromArgb(50, 90, 65, 10)) : Brushes.Transparent;
-        PinButton.Opacity = note.Pinned ? 1 : 0.6;
+        PinButton.Content = new NotePinIcon { IsPinned = note.Pinned };
         var action = note.Pinned ? "Désépingler — actuellement au premier plan" : "Épingler au premier plan";
         PinButton.ToolTip = action;
         System.Windows.Automation.AutomationProperties.SetName(PinButton, action);
@@ -258,8 +256,7 @@ public partial class NoteWindow : Window
     private void ToggleTask(int offset, bool check)
     {
         if (offset < 0 || offset >= note.Text.Length) return;
-        note.Text = note.Text[..offset] + (check ? "x" : " ") + note.Text[(offset + 1)..];
-        Editor.Text = note.Text; app.Changed();
+        Editor.Text = note.Text[..offset] + (check ? "x" : " ") + note.Text[(offset + 1)..];
     }
     private void OpenMenu(object sender, RoutedEventArgs e)
     {
