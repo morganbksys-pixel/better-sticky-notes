@@ -74,6 +74,8 @@ dotnet run --project tests/SmokeTests.csproj
 
 Quitter l’application avant de tester une autre compilation. La suite complète peut afficher des fenêtres de test ; l’option `--quiet-ui` lance les vérifications sans affichage.
 
+Le workflow GitHub Actions [Tests .NET](.github/workflows/dotnet.yml) s’exécute à chaque push et pull request, et peut être lancé manuellement depuis l’onglet **Actions**. Il installe le SDK .NET 10 et le dictionnaire français sur un runner Windows, compile en Release, puis lance les vérifications `--quiet-ui` et la suite complète avec `dotnet run` (le projet utilise un exécutable de tests STA, pas `dotnet test`). Les interactions réelles avec la barre des tâches, la zone de notification, le verrouillage de session et les écrans restent à vérifier manuellement.
+
 La publication produit l’exécutable et le ZIP autonome dans `dist/BetterStickyNotes-<version>/` et `dist/`, et conserve les trois dernières versions.
 
 Pour les détails sur le stockage, le chiffrement, les tests et la publication, consulter la [documentation technique](docs/TECHNIQUE.md).

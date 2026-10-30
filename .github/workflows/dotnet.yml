@@ -1,0 +1,56 @@
+name: Tests .NET
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Compilation et tests Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+
+    steps:
+      - name: Récupérer les sources
+        uses: actions/checkout@v4
+
+      - name: Installer le SDK .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Installer le dictionnaire français
+        run: |
+          $capability = Get-WindowsCapability -Online -Name 'Language.Basic~~~fr-FR~0.0.1.0' -ErrorAction Stop
+          if ($capability.State -ne 'Installed') {
+            $result = Add-WindowsCapability -Online -Name $capability.Name -ErrorAction Stop
+            if ($result.RestartNeeded) {
+              throw 'Le dictionnaire français nécessite un redémarrage du runner.'
+            }
+          }
+
+      - name: Restaurer les dépendances
+        run: dotnet restore tests/SmokeTests.csproj
+
+      - name: Compiler l’application et les tests
+        run: dotnet build tests/SmokeTests.csproj --configuration Release --no-restore
+
+      - name: Exécuter les vérifications sans affichage
+        run: dotnet run --project tests/SmokeTests.csproj --configuration Release --no-build --no-restore -- --quiet-ui
+
+      - name: Exécuter la suite complète
+        run: dotnet run --project tests/SmokeTests.csproj --configuration Release --no-build --no-restore
