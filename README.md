@@ -1,5 +1,7 @@
 # Better Sticky Notes — MVP
 
+![Better Sticky Notes : vos idées, toujours à portée de main. Aperçu de la gestion des notes et des post-it sur le bureau.](docs/media/better-sticky-notes-presentation.png)
+
 Application Windows 10/11 (x64), en C# / .NET 10 et WPF. Notes colorées indépendantes, épinglage au premier plan, Markdown, sauvegarde automatique et icône dans la zone de notification.
 
 La version active est affichée dans le titre de **Mes notes** et dans l’infobulle de l’icône système. La rubrique **Mes notes → Paramètres → À propos** indique également le chemin de l’exécutable actif, utile si plusieurs versions sont présentes.
