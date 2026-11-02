@@ -13,8 +13,16 @@ $output = Join-Path $dist "BetterStickyNotes-$version"
 $archive = Join-Path $dist "BetterStickyNotes-$version-win-x64.zip"
 if ((Test-Path -LiteralPath $output) -and ((Get-Item -LiteralPath $output).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Le dossier de sortie ne doit pas être un lien.' }
 
-dotnet publish BetterStickyNotes.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None --ignore-failed-sources -o $output
+dotnet publish BetterStickyNotes.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false -p:DebugType=None --ignore-failed-sources -o $output
 if ($LASTEXITCODE -ne 0) { throw 'Échec de la publication.' }
+# Keep native dependencies beside the executable instead of in a temporary extraction cache.
+$requiredNativeLibraries = @('wpfgfx_cor3.dll', 'PresentationNative_cor3.dll', 'PenImc_cor3.dll', 'D3DCompiler_47_cor3.dll', 'vcruntime140_cor3.dll', 'e_sqlite3.dll', 'coreclr.dll')
+foreach ($library in $requiredNativeLibraries) {
+    $libraryPath = Join-Path $output $library
+    if (!(Test-Path -LiteralPath $libraryPath -PathType Leaf) -or (Get-Item -LiteralPath $libraryPath).Length -eq 0) {
+        throw "Bibliothèque native absente de la publication : $library"
+    }
+}
 Copy-Item -LiteralPath README.md -Destination (Join-Path $output 'README.md')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs') -Destination $output -Recurse -Force
 Compress-Archive -Path (Join-Path $output '*') -DestinationPath $archive -Force

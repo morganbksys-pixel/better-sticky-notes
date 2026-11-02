@@ -8,7 +8,7 @@ Des post-it pour Windows 10/11 : notes colorées, Markdown, groupes et sauvegard
 
 **[Télécharger la dernière version pour Windows x64](https://github.com/morganbksys-pixel/better-sticky-notes/releases/latest)**
 
-Extraire entièrement le ZIP, puis lancer `BetterStickyNotes.exe`. Aucun installateur ni installation de .NET nécessaire.
+Extraire entièrement le ZIP, puis lancer `BetterStickyNotes.exe`. Aucun installateur ni installation de .NET nécessaire. Conserver les DLL fournies à côté de l’exécutable : elles sont nécessaires au fonctionnement de l’application, notamment à l’affichage des fenêtres.
 
 L’application s’ouvre sur **Mes notes**, pour créer, rechercher et organiser vos notes. Double-cliquer sur une ligne affiche le post-it correspondant. Les post-it restent masqués au démarrage jusqu’à leur ouverture.
 

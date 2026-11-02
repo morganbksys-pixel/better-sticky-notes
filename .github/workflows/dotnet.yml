@@ -54,3 +54,6 @@ jobs:
 
       - name: Exécuter la suite complète
         run: dotnet run --project tests/SmokeTests.csproj --configuration Release --no-build --no-restore
+
+      - name: Vérifier la publication portable et ses bibliothèques natives
+        run: ./publish.ps1
