@@ -100,7 +100,9 @@ Fermer Sticky Notes / OneNote avant l’import. Pour travailler sur une copie de
 
 ## Fenêtres, Markdown et performances
 
-Le lancement manuel et la relance ouvrent **Mes notes**, sans restaurer les post-it. Une seconde instance réveille la fenêtre de gestion de l’instance active. Le démarrage Windows utilise `--background` via l’entrée `BetterStickyNotes` de `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, sans droits administrateur. Une entrée existante est actualisée vers le chemin du nouvel exécutable lors du lancement ; l’option reste facultative.
+Le premier lancement restaure les post-it non protégés dont `Hidden` vaut `false`, hors corbeille, sans les activer ni réorganiser leurs positions. Le lancement manuel ouvre également **Mes notes** ; le démarrage Windows utilise `--background` et laisse la gestion fermée. Une seconde instance réveille uniquement la fenêtre de gestion de l’instance active, sans changer sa disposition. Les notes protégées restent verrouillées au chargement.
+
+Le démarrage Windows utilise l’entrée `BetterStickyNotes` de `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, sans droits administrateur. Une entrée existante visant `BetterStickyNotes.exe` est actualisée vers le chemin du nouvel exécutable lors de son premier lancement effectif ; l’option reste facultative. Les paramètres affichent la version compilée, le chemin actif et la commande enregistrée. Le bouton **Utiliser cette version au démarrage** réécrit uniquement cette valeur si elle existe et vise un autre chemin. Il faut quitter l’instance active avant de lancer une autre version portable.
 
 Les ouvertures de groupes sont progressives pour laisser l’interface répondre. Le double-clic dans la liste révèle et déplie uniquement la note ciblée, sans changer son épinglage. Les déplacements ne reconstruisent pas la liste.
 

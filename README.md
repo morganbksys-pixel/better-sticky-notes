@@ -10,7 +10,7 @@ Des post-it pour Windows 10/11 : notes colorées, Markdown, groupes et sauvegard
 
 Extraire entièrement le ZIP, puis lancer `BetterStickyNotes.exe`. Aucun installateur ni installation de .NET nécessaire. Conserver les DLL fournies à côté de l’exécutable : elles sont nécessaires au fonctionnement de l’application, notamment à l’affichage des fenêtres.
 
-L’application s’ouvre sur **Mes notes**, pour créer, rechercher et organiser vos notes. Double-cliquer sur une ligne affiche le post-it correspondant. Les post-it restent masqués au démarrage jusqu’à leur ouverture.
+L’application s’ouvre sur **Mes notes**, pour créer, rechercher et organiser vos notes. Double-cliquer sur une ligne affiche le post-it correspondant. À chaque lancement, les post-it précédemment visibles retrouvent leur emplacement, leurs dimensions, leur épinglage et leur repli. Les notes masquées, supprimées ou protégées ne sont pas rouvertes automatiquement.
 
 ## L’essentiel
 
@@ -27,7 +27,13 @@ Dans la galerie, les boutons **Notes actives / Corbeille** permettent de choisir
 
 Le bouton **œil barré** masque un post-it sans supprimer sa note. Dans Mes notes, un **œil ouvert** indique une note visible et un **œil barré** une note masquée ; l’infobulle précise l’action au clic. Les menus des notes et des groupes utilisent les mêmes icônes. Pour retrouver **Mes notes**, relancer l’application ou double-cliquer sur son icône jaune dans la zone de notification. Le clic droit sur cette icône permet aussi de créer une note ou de quitter.
 
-Dans **Mes notes → Paramètres**, l’option **Démarrer avec Windows** lance l’application en arrière-plan, sans ouvrir de fenêtre. Elle est désactivée par défaut.
+Dans **Mes notes → Paramètres**, l’option **Démarrer avec Windows** lance l’application en arrière-plan : les post-it précédemment visibles sont restaurés sans ouvrir Mes notes ni prendre le focus. Elle est désactivée par défaut.
+
+Les paramètres affichent la version et le chemin de l’exécutable actif, ainsi que la commande enregistrée pour le démarrage Windows. Si le démarrage est activé et pointe vers un autre chemin, **Utiliser cette version au démarrage** permet de le rattacher à l’application ouverte. L’enregistrement se trouve dans `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`, sous la valeur `BetterStickyNotes`.
+
+Pour passer à une nouvelle version portable, quittez d’abord l’application depuis son icône de notification, puis lancez le nouvel exécutable. Si une ancienne version tourne déjà, lancer un autre exécutable ouvre simplement Mes notes dans cette ancienne instance. Au premier lancement effectif, l’application actualise son enregistrement de démarrage existant lorsqu’il pointe vers `BetterStickyNotes.exe`, sans activer le démarrage s’il était désactivé.
+
+Les versions antérieures à **0.21.8** masquaient toutes les notes au lancement et sauvegardaient cet état. Après la mise à jour, réaffichez une fois les post-it souhaités : leur visibilité sera ensuite conservée pour les lancements suivants. Si un écran n’est plus disponible, les fenêtres sont ramenées dans une zone visible.
 
 ### Raccourcis utiles
 

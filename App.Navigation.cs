@@ -15,6 +15,46 @@ public partial class App
 
     public static string StartupCommand(string executable) => $"\"{executable}\" --background";
 
+    /// <summary>Reads this application's Windows startup command without changing the registration.</summary>
+    public static string? GetStartupRegistration()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+        return key?.GetValue("BetterStickyNotes") as string;
+    }
+
+    private static string? StartupExecutable(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command)) return null;
+        var executable = command.Trim();
+        if (executable.EndsWith(" --background", StringComparison.OrdinalIgnoreCase)) executable = executable[..^13].TrimEnd();
+        if (executable.StartsWith('"'))
+        {
+            if (executable.Length < 2 || !executable.EndsWith('"')) return null;
+            executable = executable[1..^1];
+        }
+        return Path.IsPathFullyQualified(executable) && executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && !executable.Contains('"') ? executable : null;
+    }
+
+    /// <summary>Compares the registered executable path with a candidate, ignoring Windows path casing.</summary>
+    /// <param name="command">The registered startup command, or null when disabled.</param>
+    /// <param name="executable">The full candidate executable path.</param>
+    public static bool StartupTargetsExecutable(string? command, string executable)
+    {
+        var registered = StartupExecutable(command);
+        if (registered is null || !Path.IsPathFullyQualified(executable)) return false;
+        try { return string.Equals(Path.GetFullPath(registered), Path.GetFullPath(executable), StringComparison.OrdinalIgnoreCase); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+    }
+
+    /// <summary>Rebinds an enabled startup registration to the running application, preserving opt-in.</summary>
+    public static void UseCurrentVersionForStartup()
+    {
+        var executable = Environment.ProcessPath ?? throw new IOException("Le chemin de l’application est indisponible.");
+        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
+        if (key?.GetValue("BetterStickyNotes") is not string) return;
+        key.SetValue("BetterStickyNotes", StartupCommand(executable));
+    }
+
     private static void UpgradeStartupRegistration()
     {
         // Preserve opt-in, but update this app's existing entry after an upgrade/move.
@@ -22,9 +62,7 @@ public partial class App
         {
             using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
             if (key?.GetValue("BetterStickyNotes") is not string command) return;
-            var executable = command.Trim();
-            if (executable.EndsWith(" --background", StringComparison.OrdinalIgnoreCase)) executable = executable[..^13];
-            executable = executable.Trim('"');
+            var executable = StartupExecutable(command);
             if (string.Equals(Path.GetFileName(executable), "BetterStickyNotes.exe", StringComparison.OrdinalIgnoreCase))
                 key.SetValue("BetterStickyNotes", StartupCommand(Environment.ProcessPath!));
         }
@@ -34,9 +72,9 @@ public partial class App
 
     public void PrepareLaunch(bool background)
     {
-        // Startup never restores floating windows or rearranges saved positions.
-        foreach (var note in Store.Notes) note.Hidden = true;
-        Changed();
+        // Restore only previously visible, unprotected notes without taking focus.
+        foreach (var note in Store.Notes.Where(n => !n.Hidden && !n.Deleted && !n.IsProtected).ToList())
+            Open(note, activate: false);
         if (!background) ShowManager();
     }
 

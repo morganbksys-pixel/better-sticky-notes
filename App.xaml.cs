@@ -312,10 +312,7 @@ public partial class App : System.Windows.Application
     }
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr handle);
     public static bool IsStartupEnabled()
-    {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
-        return key?.GetValue("BetterStickyNotes") is string;
-    }
+        => GetStartupRegistration() is not null;
     public static void ToggleStartup()
     {
         try

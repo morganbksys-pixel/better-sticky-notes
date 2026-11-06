@@ -13,11 +13,42 @@ public sealed class SettingsView : ScrollViewer
         var panel = new StackPanel { Margin = new Thickness(28) };
         panel.Children.Add(new TextBlock { Text = "Paramètres", FontSize = 26, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 24) });
         var startup = new CheckBox { Content = "Démarrer avec Windows", Margin = new Thickness(0, 0, 0, 10) };
-        try { startup.IsChecked = App.IsStartupEnabled(); }
-        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException) { startup.IsEnabled = false; startup.ToolTip = ex.Message; }
-        startup.Click += (_, _) => { App.ToggleStartup(); try { startup.IsChecked = App.IsStartupEnabled(); } catch { startup.IsEnabled = false; } };
         panel.Children.Add(startup);
-        panel.Children.Add(new TextBlock { Text = "Le démarrage Windows reste discret, sans ouvrir de fenêtre.", Foreground = System.Windows.Media.Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 24) });
+        panel.Children.Add(new TextBlock { Text = "Les post-it précédemment visibles sont restaurés à leur emplacement, sans ouvrir Mes notes. Les notes protégées restent verrouillées.", Foreground = System.Windows.Media.Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) });
+        panel.Children.Add(new TextBlock { Text = $"Version active : {AppInfo.Version}", TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBox { Text = AppInfo.ExecutablePath, IsReadOnly = true, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 10) });
+        panel.Children.Add(new TextBlock { Text = "Commande enregistrée au démarrage Windows :" });
+        var startupCommand = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 6) };
+        panel.Children.Add(startupCommand);
+        var repairStartup = new Button { Content = "Utiliser cette version au démarrage", HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 9, 14, 9), Margin = new Thickness(0, 4, 0, 8) };
+        panel.Children.Add(repairStartup);
+        void RefreshStartup()
+        {
+            try
+            {
+                var command = App.GetStartupRegistration();
+                startup.IsEnabled = true; startup.ToolTip = null;
+                startup.IsChecked = command is not null;
+                startupCommand.Text = command ?? "Désactivé";
+                repairStartup.IsEnabled = command is not null && Environment.ProcessPath is string executable && !App.StartupTargetsExecutable(command, executable);
+            }
+            catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+            {
+                startup.IsEnabled = false; startup.ToolTip = ex.Message;
+                repairStartup.IsEnabled = false;
+                startupCommand.Text = "Impossible de lire le démarrage Windows : " + ex.Message;
+            }
+        }
+        startup.Click += (_, _) => { App.ToggleStartup(); RefreshStartup(); };
+        repairStartup.Click += (_, _) =>
+        {
+            try { App.UseCurrentVersionForStartup(); }
+            catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+            { AppDialog.Show("Impossible de modifier le démarrage avec Windows.\n" + ex.Message, "Better Sticky Notes"); }
+            RefreshStartup();
+        };
+        RefreshStartup();
+        panel.Children.Add(new TextBlock { Text = "Pour changer de version, quittez d’abord l’application depuis son icône de notification, puis ouvrez le nouvel exécutable. Si une version tourne déjà, un autre lancement ouvre Mes notes dans cette instance.", Foreground = System.Windows.Media.Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 24) });
         void Add(string label, Action action)
         {
             var button = new Button { Content = label, HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 9, 14, 9), Margin = new Thickness(0, 4, 0, 4) };
