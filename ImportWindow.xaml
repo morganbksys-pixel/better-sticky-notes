@@ -1,17 +1,23 @@
 <Window x:Class="BetterStickyNotes.ImportWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Importer depuis Sticky Notes" Width="680" Height="500" MinWidth="520" MinHeight="360" WindowStartupLocation="CenterScreen" Background="#FAFAFA" FontFamily="Segoe UI" FontSize="13">
-    <Border Background="#FAFAFA" Padding="24"><Grid>
+        Title="Importer depuis Sticky Notes" Width="680" Height="500" MinWidth="520" MinHeight="360" WindowStartupLocation="CenterScreen" Background="{StaticResource AppSurfaceBrush}" FontFamily="Segoe UI" FontSize="13">
+    <Window.Resources>
+        <Style x:Key="ImportCellTextStyle" TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="10,0"/><Setter Property="TextTrimming" Value="CharacterEllipsis"/></Style>
+        <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="{StaticResource AppSubtleSurfaceBrush}"/><Setter Property="Foreground" Value="{StaticResource AppMutedTextBrush}"/><Setter Property="FontSize" Value="12"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="10,8"/><Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
+        <Style TargetType="DataGridCell"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource AppTextBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="BorderBrush" Value="Transparent"/><Style.Triggers><Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}"/></Trigger></Style.Triggers></Style>
+        <Style TargetType="DataGridRow"><Setter Property="Background" Value="{StaticResource AppSurfaceBrush}"/><Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource AppSubtleSurfaceBrush}"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="{StaticResource AppSelectionBrush}"/></Trigger></Style.Triggers></Style>
+    </Window.Resources>
+    <Border Background="{StaticResource AppSurfaceBrush}" Padding="24,20"><Grid>
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <StackPanel><TextBlock Text="Retrouvez vos notes Windows" FontSize="23" FontWeight="SemiBold"/><TextBlock x:Name="Summary" Margin="0,8,0,12" TextWrapping="Wrap"/></StackPanel>
-        <TextBlock Grid.Row="1" Text="Sélectionnez les notes à importer. Les originales resteront intactes." Margin="0,0,0,10" TextWrapping="Wrap"/>
-        <DataGrid x:Name="NoteList" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#EEEEEE" BorderBrush="#DDDDDD" Background="White" RowHeight="40" SelectionMode="Single">
+        <StackPanel><TextBlock Text="Retrouvez vos notes Windows" Style="{StaticResource DialogHeadingStyle}"/><TextBlock x:Name="Summary" Style="{StaticResource DialogDescriptionStyle}" FontSize="12" Margin="0,0,0,12"/></StackPanel>
+        <TextBlock Grid.Row="1" Text="Sélectionnez les notes à importer. Les originales resteront intactes." Style="{StaticResource DialogDescriptionStyle}" Margin="0,0,0,12"/>
+        <DataGrid x:Name="NoteList" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column" GridLinesVisibility="None" BorderBrush="{StaticResource AppBorderBrush}" Background="{StaticResource AppSurfaceBrush}" RowHeight="44" SelectionMode="Single">
             <DataGrid.Columns>
                 <DataGridTemplateColumn Width="45"><DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="Importer cette note"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                <DataGridTextColumn Header="Titre" Binding="{Binding Note.Title}" Width="220" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Contenu" Binding="{Binding Note.Text}" Width="*" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Titre" Binding="{Binding Note.Title}" Width="220" IsReadOnly="True" ElementStyle="{StaticResource ImportCellTextStyle}"/>
+                <DataGridTextColumn Header="Contenu" Binding="{Binding Note.Text}" Width="*" IsReadOnly="True" ElementStyle="{StaticResource ImportCellTextStyle}"/>
             </DataGrid.Columns>
         </DataGrid>
-        <TextBlock Grid.Row="3" Margin="0,12,0,12" Foreground="#666666" TextWrapping="Wrap" Text="Import du texte, des listes et des couleurs. Les images et la mise en forme enrichie ne sont pas importées. Les notes importées seront disponibles dans « Mes notes »."/>
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Annuler" IsCancel="True" Padding="18,9"/><Button x:Name="ImportButton" Content="Importer la sélection" Click="ImportClick" Padding="18,9" Background="#E1EAF7"/></StackPanel>
+        <TextBlock Grid.Row="3" Margin="0,12,0,0" Style="{StaticResource DialogDescriptionStyle}" FontSize="12" LineHeight="17" Text="Import du texte, des listes et des couleurs. Les images et la mise en forme enrichie ne sont pas importées. Les notes importées seront disponibles dans « Mes notes »."/>
+        <StackPanel Grid.Row="4" Style="{StaticResource DialogActionsStyle}" Margin="0,12,0,0"><Button Content="Annuler" IsCancel="True" Style="{StaticResource DialogButtonStyle}"/><Button x:Name="ImportButton" Style="{StaticResource DialogPrimaryButtonStyle}" Content="Importer la sélection" Click="ImportClick"/></StackPanel>
     </Grid></Border>
 </Window>

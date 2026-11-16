@@ -54,8 +54,12 @@ public sealed class CaptureViewerWindow : Window
         viewport = new ScrollViewer { Content = stage, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false, Background = Brushes.Transparent,
             ToolTip = "Ctrl + molette : zoomer · Glisser : déplacer l’image agrandie" };
         message = new TextBlock { TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16), Visibility = Visibility.Collapsed };
-        counter = new TextBlock { Margin = new Thickness(6), VerticalAlignment = VerticalAlignment.Center };
-        zoomLabel = new TextBlock { Margin = new Thickness(8, 6, 2, 6), VerticalAlignment = VerticalAlignment.Center };
+        counter = new TextBlock { FontSize = 12, Margin = new Thickness(6), VerticalAlignment = VerticalAlignment.Center };
+        zoomLabel = new TextBlock { FontSize = 12, Margin = new Thickness(8, 6, 2, 6), VerticalAlignment = VerticalAlignment.Center };
+        counter.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
+        zoomLabel.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
+        message.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
+        viewport.SetResourceReference(Control.BackgroundProperty, "AppSubtleSurfaceBrush");
         var tools = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         Button Tool(object content, string label, Action action)
         {
@@ -69,9 +73,12 @@ public sealed class CaptureViewerWindow : Window
         Tool("Adapter", "Afficher l’image entière", FitImage);
         Tool("100 %", "Afficher à la taille réelle", () => ZoomAt(1, ViewCenter()));
         tools.Children.Add(zoomLabel);
-        var surface = new Grid { Margin = new Thickness(12) };
+        var surface = new Grid { Margin = new Thickness(16) };
         surface.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); surface.RowDefinitions.Add(new RowDefinition());
-        surface.Children.Add(tools); Grid.SetRow(viewport, 1); surface.Children.Add(viewport); Grid.SetRow(message, 1); surface.Children.Add(message);
+        var imageFrame = new Border { Child = viewport, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(8) };
+        imageFrame.SetResourceReference(Border.BorderBrushProperty, "AppBorderBrush");
+        imageFrame.SetResourceReference(Border.BackgroundProperty, "AppSubtleSurfaceBrush");
+        surface.Children.Add(tools); Grid.SetRow(imageFrame, 1); surface.Children.Add(imageFrame); Grid.SetRow(message, 1); surface.Children.Add(message);
         Content = surface;
         viewport.SizeChanged += (_, _) => RefreshScale();
         viewport.ScrollChanged += (_, e) => { if (e.ViewportWidthChange != 0 || e.ViewportHeightChange != 0) RefreshScale(); };

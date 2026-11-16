@@ -15,8 +15,8 @@ public sealed class CaptureGalleryView : Grid
     private readonly Window owner;
     private readonly Action<Note> locateNote;
     private readonly ListBox cards = new() { SelectionMode = SelectionMode.Extended, BorderThickness = new Thickness(0), Background = Brushes.Transparent };
-    private readonly TextBlock counter = new() { Foreground = Brushes.DimGray, Margin = new Thickness(0, 8, 0, 8), TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock empty = new() { Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(8, 20, 8, 8), IsHitTestVisible = false };
+    private readonly TextBlock counter = new() { FontSize = 12, Margin = new Thickness(0, 8, 0, 16), TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock empty = new() { FontSize = 14, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 360, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(24), IsHitTestVisible = false };
     private readonly RadioButton activeFilter, trashFilter;
     private readonly Button open, copy, export, locate, remove;
     private string? renderedState;
@@ -37,6 +37,8 @@ public sealed class CaptureGalleryView : Grid
     {
         this.app = app; this.owner = owner; this.locateNote = locateNote;
         Margin = new Thickness(28, 28, 28, 18);
+        counter.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
+        empty.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition());
@@ -46,23 +48,27 @@ public sealed class CaptureGalleryView : Grid
         trashFilter = new RadioButton { Content = "Corbeille", ToolTip = "Captures des notes supprimées : consultation et export" };
         activeFilter.SetResourceReference(StyleProperty, "CaptureGalleryFilterStyle");
         trashFilter.SetResourceReference(StyleProperty, "CaptureGalleryFilterStyle");
-        var filters = new Border { Background = new SolidColorBrush(Color.FromRgb(246, 246, 245)), BorderBrush = new SolidColorBrush(Color.FromRgb(227, 229, 232)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(2), Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+        var filters = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(2), Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
             Child = new StackPanel { Orientation = Orientation.Horizontal, Children = { activeFilter, trashFilter } } };
+        filters.SetResourceReference(Border.BackgroundProperty, "AppSubtleSurfaceBrush");
+        filters.SetResourceReference(Border.BorderBrushProperty, "AppBorderBrush");
         System.Windows.Automation.AutomationProperties.SetName(filters, "Captures des notes actives ou de la corbeille");
         DockPanel.SetDock(filters, Dock.Right); header.Children.Add(filters);
-        header.Children.Add(new TextBlock { Text = "Captures", FontSize = 26, FontWeight = FontWeights.SemiBold });
+        var title = new TextBlock { Text = "Captures" }; title.SetResourceReference(StyleProperty, "PageHeadingStyle"); header.Children.Add(title);
         Children.Add(header);
-        var tools = new WrapPanel();
+        var tools = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         Button Action(string label, string hint, Action action)
         {
-            var button = new Button { Content = label, ToolTip = hint, Padding = new Thickness(8, 6, 8, 6), Margin = new Thickness(0, 0, 6, 6) };
+            var button = new Button { Content = label, ToolTip = hint, Padding = new Thickness(10, 8, 10, 8), Margin = new Thickness(0, 0, 8, 8) };
             button.Click += (_, _) => action(); tools.Children.Add(button); return button;
         }
         open = Action("Ouvrir", "Entrée · Double-clic", OpenSelected);
+        open.SetResourceReference(StyleProperty, "PrimaryButtonStyle");
         copy = Action("Copier", "Ctrl+C · Une image ou plusieurs fichiers", CopySelected);
         export = Action("Enregistrer…", "Ctrl+S · Une image ou un dossier pour la sélection", ExportSelected);
         locate = Action("Retrouver la note", "Sélectionner la note d’origine dans Mes notes", LocateSelected);
         remove = Action("Supprimer…", "Suppr · Supprimer uniquement les captures sélectionnées", async () => await DeleteSelectedAsync());
+        remove.SetResourceReference(StyleProperty, "DangerOutlineButtonStyle");
         var commands = new StackPanel { Children = { counter, tools } }; SetRow(commands, 1); Children.Add(commands);
         var panel = new FrameworkElementFactory(typeof(WrapPanel));
         cards.ItemsPanel = new ItemsPanelTemplate(panel);
@@ -87,7 +93,8 @@ public sealed class CaptureGalleryView : Grid
         cards.ContextMenu = new ContextMenu();
         cards.ContextMenuOpening += (_, _) => BuildMenu();
         var body = new Grid { Children = { cards, empty } }; SetRow(body, 2); Children.Add(body);
-        var hint = new TextBlock { Text = "Clic : sélectionner · Ctrl/Maj+clic : sélection multiple · Flèches : naviguer\nEntrée : ouvrir · Ctrl+A : tout sélectionner · Échap : désélectionner · Ctrl+C : copier · Ctrl+S : enregistrer · Suppr : supprimer", FontSize = 11, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
+        var hint = new TextBlock { Text = "Double-clic : ouvrir · Ctrl/Maj+clic : sélection multiple", ToolTip = "Flèches : naviguer · Entrée : ouvrir · Ctrl+A : tout sélectionner · Échap : désélectionner\nCtrl+C : copier · Ctrl+S : enregistrer · Suppr : supprimer", FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 16, 0, 0) };
+        hint.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
         SetRow(hint, 3); Children.Add(hint); UpdateActions();
         activeFilter.Checked += FilterChanged;
         trashFilter.Checked += FilterChanged;
@@ -114,18 +121,20 @@ public sealed class CaptureGalleryView : Grid
         viewer?.Close(); viewer = null;
         renderedState = state; Entries = entries; updating = true;
         cards.Items.Clear();
-        empty.Text = InTrash ? "Aucune capture dans la corbeille." : "Aucune capture pour le moment. Utilisez le bouton appareil photo en haut d’un post-it.";
+        empty.Text = InTrash ? "Aucune capture dans la corbeille." : "Aucune capture pour le moment.\nDans un post-it : ⋯ → Capturer cet écran (Ctrl+Maj+S).";
         empty.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         foreach (var entry in entries)
         {
             var content = new StackPanel();
-            var preview = new Border { Height = 112, Background = new SolidColorBrush(Color.FromRgb(244, 245, 247)), CornerRadius = new CornerRadius(4), Padding = new Thickness(3) };
+            var preview = new Border { Height = 112, CornerRadius = new CornerRadius(6), Padding = new Thickness(4) };
+            preview.SetResourceReference(Border.BackgroundProperty, "AppSubtleSurfaceBrush");
             try { preview.Child = new Image { Source = app.Store.LoadCapture(entry.Note, entry.Capture, thumbnail: true), Stretch = Stretch.Uniform }; }
             catch (Exception ex) when (ImageError(ex)) { preview.Child = new TextBlock { Text = "Image indisponible", VerticalAlignment = VerticalAlignment.Center }; }
             content.Children.Add(preview);
-            content.Children.Add(new TextBlock { Text = entry.Note.DisplayTitle, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 8, 0, 4), ToolTip = entry.Note.DisplayTitle });
-            content.Children.Add(new TextBlock { Text = $"{entry.Capture.CreatedAtUtc.ToLocalTime():dd/MM/yyyy à HH:mm:ss}\n{entry.Capture.Width} × {entry.Capture.Height} pixels", Foreground = Brushes.DimGray, FontSize = 11 });
-            var item = new ListBoxItem { Tag = entry, Content = content, Width = 210, Padding = new Thickness(10), Margin = new Thickness(0, 0, 10, 10), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            content.Children.Add(new TextBlock { Text = entry.Note.DisplayTitle, FontSize = 14, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 10, 0, 6), ToolTip = entry.Note.DisplayTitle });
+            var metadata = new TextBlock { Text = $"{entry.Capture.CreatedAtUtc.ToLocalTime():dd/MM/yyyy à HH:mm}\n{entry.Capture.Width} × {entry.Capture.Height} pixels", FontSize = 12 };
+            metadata.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush"); content.Children.Add(metadata);
+            var item = new ListBoxItem { Tag = entry, Content = content, Width = 210, Padding = new Thickness(12), Margin = new Thickness(0, 0, 10, 10), HorizontalContentAlignment = HorizontalAlignment.Stretch };
             item.SetResourceReference(StyleProperty, "CaptureGalleryCardStyle");
             System.Windows.Automation.AutomationProperties.SetName(item, $"{entry.Note.DisplayTitle}, capture du {entry.Capture.CreatedAtUtc.ToLocalTime():g}");
             item.MouseDoubleClick += (_, e) => { if (e.ChangedButton == MouseButton.Left) { Open(entry); e.Handled = true; } };
@@ -140,7 +149,9 @@ public sealed class CaptureGalleryView : Grid
     private void UpdateActions()
     {
         var count = SelectedEntries.Count;
-        counter.Text = $"{Entries.Count} capture(s) · {count} sélectionnée(s) · Plus récentes en premier" + (InTrash ? " · Corbeille : consultation uniquement" : "");
+        counter.Text = (Entries.Count == 1 ? "1 capture" : $"{Entries.Count} captures")
+            + (count == 0 ? "" : count == 1 ? " · 1 sélectionnée" : $" · {count} sélectionnées")
+            + (InTrash ? " · Corbeille : consultation et export" : " · Plus récentes en premier");
         open.IsEnabled = locate.IsEnabled = count == 1;
         copy.IsEnabled = export.IsEnabled = count > 0;
         remove.IsEnabled = count > 0 && !InTrash;
@@ -230,7 +241,8 @@ public sealed class CaptureGalleryView : Grid
         if (InTrash) return;
         var selected = SelectedEntries.ToArray();
         if (selected.Length == 0) return;
-        var accepted = confirm?.Invoke(selected.Length) ?? AppDialog.Show(owner, $"Supprimer définitivement {selected.Length} capture(s) sélectionnée(s) ?\n\nLes notes seront conservées. Cette action est irréversible.", "Supprimer les captures", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No, "Supprimer les captures") == MessageBoxResult.Yes;
+        var question = selected.Length == 1 ? "Supprimer définitivement la capture sélectionnée ?" : $"Supprimer définitivement les {selected.Length} captures sélectionnées ?";
+        var accepted = confirm?.Invoke(selected.Length) ?? AppDialog.Show(owner, question + "\n\nLes notes seront conservées. Cette action est irréversible.", "Supprimer les captures", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No, "Supprimer les captures") == MessageBoxResult.Yes;
         if (!accepted) return;
         foreach (var group in selected.GroupBy(c => c.Note))
             await Dispatcher.InvokeAsync(() => app.RemoveCapturesAsync(group.Key, group.Select(c => c.Capture))).Task.Unwrap();

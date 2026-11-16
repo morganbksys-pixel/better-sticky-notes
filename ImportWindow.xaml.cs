@@ -13,7 +13,8 @@ public partial class ImportWindow : Window
         this.import = import;
         rows = result.Notes.Select(n => new Row(n)).ToList();
         NoteList.ItemsSource = rows;
-        Summary.Text = $"{rows.Count} note(s) à importer · {result.AlreadyImported} déjà importée(s) · {result.Deleted} supprimée(s) ignorée(s) · {result.Empty} vide(s) ignorée(s).";
+        Summary.Text = $"À importer : {rows.Count} · Déjà importées : {result.AlreadyImported} · Ignorées : {result.Deleted + result.Empty}";
+        Summary.ToolTip = $"Notes ignorées — supprimées : {result.Deleted} · vides : {result.Empty}";
         ImportButton.IsEnabled = rows.Count > 0;
         Closing += (_, e) => { if (saving) e.Cancel = true; };
     }

@@ -21,15 +21,21 @@ L’application s’ouvre sur **Mes notes**, pour créer, rechercher et organise
 - **Protection par mot de passe** : chiffrer le titre et le contenu des notes confidentielles.
 - **Corbeille** : restaurer les notes supprimées ou les effacer définitivement après confirmation. La purge automatique est facultative et désactivée par défaut.
 
+Depuis la version **0.22.0**, les extraits de **Mes notes** présentent le texte lisible du Markdown, sans les marqueurs de mise en forme ni les adresses cachées derrière les libellés des liens. Dans les petits post-it, le bandeau privilégie le titre : **Replier / Déplier** et **Capturer cet écran** restent accessibles dans **⋯**, ainsi que par **Ctrl+Maj+M** et **Ctrl+Maj+S**. Les boutons partagent les mêmes repères de survol, de clic et de focus clavier, en conservant le jaune de création et le bleu de sélection.
+
 Le repli, la recherche dans un post-it et la galerie de captures sont disponibles à partir de la version **0.21.4**.
 
 Dans la galerie, les boutons **Notes actives / Corbeille** permettent de choisir les captures affichées. Un clic sélectionne, un double-clic ou **Entrée** ouvre l’image. **Ctrl+clic** et **Maj+clic** sélectionnent plusieurs captures ; les **flèches** déplacent la sélection. **Ctrl+A** sélectionne tout, **Échap** désélectionne, **Ctrl+C** copie l’image (ou les fichiers si plusieurs), **Ctrl+S** enregistre et **Suppr** retire les captures après confirmation. L’export multiple choisit un dossier sans écraser ses fichiers. Les captures de la corbeille restent consultables et exportables. Dans la visionneuse, **Ctrl+molette** zoome et **← / →** parcourt les captures en boucle.
+
+Les captures sélectionnées sont repérées par un fond bleu et une coche. Les raccourcis complémentaires de la galerie sont regroupés dans l’infobulle de l’aide en bas de la fenêtre. Les dialogues partagent la même présentation : action principale jaune, suppression définitive rouge et **Annuler** par défaut pour les confirmations destructives.
+
+Les écrans, menus, infobulles et aides utilisent une palette et des repères de texte communs. Les barres de défilement fines sont partagées dans l’application. La recherche de Mes notes affiche un cadre bleu lorsqu’elle a le focus clavier.
 
 Le bouton **œil barré** masque un post-it sans supprimer sa note. Dans Mes notes, un **œil ouvert** indique une note visible et un **œil barré** une note masquée ; l’infobulle précise l’action au clic. Les menus des notes et des groupes utilisent les mêmes icônes. Pour retrouver **Mes notes**, relancer l’application ou double-cliquer sur son icône jaune dans la zone de notification. Le clic droit sur cette icône permet aussi de créer une note ou de quitter.
 
 Dans **Mes notes → Paramètres**, l’option **Démarrer avec Windows** lance l’application en arrière-plan : les post-it précédemment visibles sont restaurés sans ouvrir Mes notes ni prendre le focus. Elle est désactivée par défaut.
 
-Les paramètres affichent la version et le chemin de l’exécutable actif, ainsi que la commande enregistrée pour le démarrage Windows. Si le démarrage est activé et pointe vers un autre chemin, **Utiliser cette version au démarrage** permet de le rattacher à l’application ouverte. L’enregistrement se trouve dans `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`, sous la valeur `BetterStickyNotes`.
+Les paramètres sont organisés en **Démarrage**, **Importation** et **Données**. Le volet **Diagnostic**, replié par défaut, affiche la version et le chemin de l’exécutable actif, la commande enregistrée pour le démarrage Windows et l’aide avancée à l’import. Si le démarrage est activé et pointe vers un autre chemin, **Diagnostic → Utiliser cette version au démarrage** permet de le rattacher à l’application ouverte. L’enregistrement se trouve dans `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`, sous la valeur `BetterStickyNotes`.
 
 Pour passer à une nouvelle version portable, quittez d’abord l’application depuis son icône de notification, puis lancez le nouvel exécutable. Si une ancienne version tourne déjà, lancer un autre exécutable ouvre simplement Mes notes dans cette ancienne instance. Au premier lancement effectif, l’application actualise son enregistrement de démarrage existant lorsqu’il pointe vers `BetterStickyNotes.exe`, sans activer le démarrage s’il était désactivé.
 

@@ -260,11 +260,25 @@ public partial class NoteWindow : Window
     }
     private void OpenMenu(object sender, RoutedEventArgs e)
     {
+        var menu = BuildNoteMenu();
+        menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
+    }
+    private void HeaderSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var compact = e.NewSize.Width < 360;
+        if (compact && (CollapseButton.IsKeyboardFocusWithin || CaptureScreenButton.IsKeyboardFocusWithin)) OptionsButton.Focus();
+        CollapseButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        CaptureScreenButton.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+    }
+    private ContextMenu BuildNoteMenu()
+    {
         var menu = new ContextMenu();
         var create = new MenuItem { Header = "Nouvelle note", InputGestureText = "Ctrl+N", Icon = MenuIcon("\uE710") };
         create.Click += NewNote; menu.Items.Add(create);
         var rename = new MenuItem { Header = "Renommer la note", InputGestureText = "F2", Icon = MenuIcon("\uE70F") };
         rename.Click += (_, _) => Dispatcher.BeginInvoke(BeginTitleEdit); menu.Items.Add(rename);
+        var collapse = new MenuItem { Header = note.Collapsed ? "Déplier la note" : "Replier la note", InputGestureText = "Ctrl+Maj+M", Icon = MenuIcon(note.Collapsed ? "\uE70D" : "\uE70E") };
+        collapse.Click += ToggleCollapsed; menu.Items.Add(collapse);
         var capture = new MenuItem { Header = "Capturer cet écran", InputGestureText = "Ctrl+Maj+S", Icon = MenuIcon("\uE722"), IsEnabled = !note.IsProtected && !app.IsCapturing,
             ToolTip = note.IsProtected ? "Les captures ne sont pas disponibles dans les notes protégées." : "Capturer l’écran de ce post-it et joindre l’image à la note." };
         ToolTipService.SetShowOnDisabled(capture, true);
@@ -295,7 +309,7 @@ public partial class NoteWindow : Window
         menu.Items.Add(new Separator());
         var delete = new MenuItem { Header = "Mettre à la corbeille", Icon = MenuIcon("\uE74D") }; delete.Click += DeleteClick; menu.Items.Add(delete);
         menu.Closed += (_, _) => ScheduleInactivePreview();
-        menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
+        return menu;
     }
     private static TextBlock MenuIcon(string glyph) => NoteIcons.Glyph(glyph);
     private void BuildEditingBar()
@@ -344,7 +358,7 @@ public partial class NoteWindow : Window
     private void ShowMarkdownHelp(Button anchor)
     {
         if (markdownHelp?.IsOpen == true) { markdownHelp.IsOpen = false; return; }
-        var panel = new StackPanel { Margin = new Thickness(14), Width = 270 };
+        var panel = new StackPanel { Margin = new Thickness(16), Width = 270 };
         panel.Children.Add(new TextBlock { Text = "Markdown · l’essentiel", FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 10) });
         foreach (var (label, syntax) in new[] {
             ("Titres", "# Titre  /  ## Sous-titre"), ("Mise en valeur", "**gras**  *italique*  ~~barré~~"),
@@ -355,9 +369,14 @@ public partial class NoteWindow : Window
             panel.Children.Add(new TextBlock { Text = label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 5, 0, 2) });
             panel.Children.Add(new TextBlock { Text = syntax, FontFamily = new FontFamily("Consolas"), FontSize = 12, TextWrapping = TextWrapping.Wrap });
         }
-        panel.Children.Add(new TextBlock { Text = "Blocs de code sans coloration syntaxique.\nÉchap ou clic ailleurs pour fermer.", FontSize = 11, Foreground = Brushes.DimGray, Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap });
-        var border = new Border { Background = Brushes.WhiteSmoke, BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(9), Focusable = true,
+        var hint = new TextBlock { Text = "Blocs de code sans coloration syntaxique.\nÉchap ou clic ailleurs pour fermer.", FontSize = 12, Margin = new Thickness(0, 12, 0, 0), TextWrapping = TextWrapping.Wrap };
+        hint.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush"); panel.Children.Add(hint);
+        var border = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Focusable = true,
             Child = new ScrollViewer { Content = panel, MaxHeight = 350, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } };
+        border.SetResourceReference(Border.BackgroundProperty, "AppSurfaceBrush");
+        border.SetResourceReference(Border.BorderBrushProperty, "AppBorderBrush");
+        border.SetResourceReference(TextElement.ForegroundProperty, "AppTextBrush");
+        TextElement.SetFontFamily(border, new FontFamily("Segoe UI")); TextElement.SetFontSize(border, 13);
         markdownHelp = new System.Windows.Controls.Primitives.Popup { Child = border, PlacementTarget = anchor, Placement = System.Windows.Controls.Primitives.PlacementMode.Top, StaysOpen = false, AllowsTransparency = true };
         border.PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { markdownHelp.IsOpen = false; Editor.Focus(); e.Handled = true; } };
         markdownHelp.Opened += (_, _) => border.Focus();

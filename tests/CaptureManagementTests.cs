@@ -164,11 +164,21 @@ internal static class CaptureManagementTests
     {
         var settings = new SettingsView(app);
         var texts = Visuals(settings.Content as DependencyObject ?? settings).OfType<TextBlock>().Select(t => t.Text).ToArray();
-        Check(!texts.Contains("À propos") && !texts.Contains("Exécutable actif") && !texts.Contains(AppInfo.DisplayName), "Paramètres : bloc À propos et chemin de l’exécutable retirés");
+        Check(!texts.Contains("À propos") && !texts.Contains(AppInfo.DisplayName), "Paramètres : absence de bloc À propos redondant");
         Check(texts.Any(t => t.Contains("Fermez Sticky Notes")) && texts.Any(t => t.Contains("originales resteront intactes")) && texts.Any(t => t.Contains("Les images et la mise en forme enrichie")), "Import : étapes et contenu récupéré expliqués avant de choisir un fichier");
         var help = Visuals(settings.Content as DependencyObject ?? settings).OfType<Expander>().Single();
-        var locations = Visuals((DependencyObject)help.Content).OfType<TextBox>().Select(t => t.Text).ToArray();
-        Check(Equals(help.Header, "Où trouver mes notes ?") && locations.Length == 2 && locations.All(t => t.StartsWith("%LocalAppData%")), "Import : aide dépliable et chemins locaux copiables");
+        var details = Visuals((DependencyObject)help.Content).ToArray();
+        var locations = details.OfType<TextBox>().Where(t => t.Text.StartsWith("%LocalAppData%")).ToArray();
+        Check(System.Windows.Automation.AutomationProperties.GetName(help) == "Diagnostic" && !help.IsExpanded && locations.Length == 2 && locations.All(t => t.IsReadOnly), "Diagnostic replié : aide à l’import et chemins locaux copiables");
+        var sections = ((StackPanel)settings.Content).Children.OfType<Border>().Select(b => System.Windows.Automation.AutomationProperties.GetName(b)).ToArray();
+        Check(sections.SequenceEqual(new[] { "Démarrage", "Importation", "Données" }), "Paramètres : trois sections courantes dans un ordre stable");
+        var fields = Visuals((DependencyObject)settings.Content).OfType<TextBox>().ToArray();
+        Check(fields.All(details.Contains) && fields.Any(t => t.Text == AppInfo.ExecutablePath) && details.OfType<TextBlock>().Any(t => t.Text == $"Version active : {AppInfo.Version}"), "Les informations techniques restent disponibles uniquement dans Diagnostic");
+        Check(details.OfType<Button>().Any(b => Equals(b.Content, "Utiliser cette version au démarrage")), "La réparation du démarrage reste accessible dans Diagnostic");
+        help.IsExpanded = true;
+        var content = (FrameworkElement)settings;
+        content.Measure(new Size(460, 400)); content.Arrange(new Rect(0, 0, 460, 400)); content.UpdateLayout();
+        Check(settings.ScrollableWidth == 0 && settings.ScrollableHeight > 0, "Paramètres compacts : diagnostic consultable par défilement vertical sans débordement horizontal");
     }
 
     private static BitmapSource Image(int width, int height)

@@ -14,7 +14,26 @@ public partial class NotesWindow : Window
     {
         public Note Note { get; } = note;
         public string Title => Note.DisplayTitle;
-        public string Excerpt => Note.IsLocked ? "Contenu protégé" : Note.Text[..Math.Min(Note.Text.Length, 180)].Replace('\r', ' ').Replace('\n', ' ');
+        private string? excerptSource;
+        private string excerpt = "";
+        public string Excerpt
+        {
+            get
+            {
+                if (Note.IsLocked)
+                {
+                    excerptSource = null;
+                    excerpt = "";
+                    return "Contenu protégé";
+                }
+                if (excerptSource != Note.Text)
+                {
+                    excerpt = MarkdownExcerpt.Create(Note.Text);
+                    excerptSource = Note.Text;
+                }
+                return excerpt;
+            }
+        }
         public string ProtectionMarker => !Note.IsProtected ? "" : Note.IsLocked ? "\uE72E" : "\uE785";
         public string ProtectionState => Note.IsLocked ? "Note protégée verrouillée" : Note.IsProtected ? "Note protégée déverrouillée" : "";
         public string GroupLabel { get; set; } = "";
@@ -91,7 +110,11 @@ public partial class NotesWindow : Window
         }
         var scope = app.Store.Notes.Where(n => MatchesGroup(n) && n.Deleted == InTrash).ToList();
         ViewTitle.Text = InTrash ? "Corbeille" : GroupKey == "all" ? "Toutes les notes" : SelectedGroupId == null ? "Sans groupe" : app.Store.Groups.First(g => g.Id == SelectedGroupId).Name;
-        Counter.Text = SearchBox.Text.Trim().Length > 0 ? $"{rows.Count} résultat(s) / {scope.Count} note(s)" : $"{scope.Count} note(s)" + (InTrash ? " · Restaurer remet les notes dans Mes notes" : $" · {scope.Count(n => !n.Hidden)} visible(s) sur le bureau");
+        var noteCount = $"{scope.Count} {(scope.Count == 1 ? "note" : "notes")}";
+        var visibleCount = scope.Count(n => !n.Hidden);
+        Counter.Text = SearchBox.Text.Trim().Length > 0
+            ? $"{rows.Count} {(rows.Count == 1 ? "résultat" : "résultats")} / {noteCount}"
+            : noteCount + (InTrash ? " · Restaurer remet les notes dans Mes notes" : $" · {visibleCount} {(visibleCount == 1 ? "visible" : "visibles")} sur le bureau");
         SearchPlaceholder.Text = $"Rechercher dans {ViewTitle.Text}…";
         EmptyState.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         var searching = SearchBox.Text.Length > 0;
@@ -111,7 +134,7 @@ public partial class NotesWindow : Window
     {
         if (SelectionInfo == null || updatingRows) return;
         var count = NoteList.SelectedItems.Count;
-        SelectionInfo.Text = $"{count} note(s) sélectionnée(s)";
+        SelectionInfo.Text = count == 1 ? "1 note sélectionnée" : $"{count} notes sélectionnées";
         NewNoteButton.Visibility = InTrash ? Visibility.Collapsed : Visibility.Visible;
         EmptyTrashButton.Visibility = InTrash ? Visibility.Visible : Visibility.Collapsed;
         EmptyTrashButton.IsEnabled = app.Store.Notes.Any(n => n.Deleted);
@@ -218,8 +241,9 @@ public partial class NotesWindow : Window
         foreach (var (button, key) in new[] { (AllNotesButton, "all"), (UngroupedButton, "none"), (TrashButton, "trash"), (SettingsButton, "settings"), (GalleryButton, "gallery") })
         {
             var selected = settingsActive ? key == "settings" : GalleryVisible ? key == "gallery" : GroupKey == key;
-            button.Background = selected ? new SolidColorBrush(Color.FromRgb(234, 241, 255)) : Brushes.Transparent;
-            button.Foreground = selected ? new SolidColorBrush(Color.FromRgb(36, 91, 196)) : new SolidColorBrush(Color.FromRgb(36, 38, 41));
+            if (selected) button.SetResourceReference(Control.BackgroundProperty, "AppSelectionBrush");
+            else button.ClearValue(Control.BackgroundProperty);
+            button.SetResourceReference(Control.ForegroundProperty, selected ? "AppFocusBrush" : "AppTextBrush");
         }
         updatingGroups = true;
         if (GroupList.ItemsSource is not List<GroupChoice> current || !current.SequenceEqual(choices)) GroupList.ItemsSource = choices;

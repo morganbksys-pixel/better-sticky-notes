@@ -38,6 +38,7 @@ internal static class Program
                 ContextMenuTests.Run(quietApp, data);
                 GroupContextTests.Run(quietApp);
                 ManagementLayoutTests.Run(quietApp);
+                VisualRefreshTests.Run(quietApp);
                 PresentationTests.Run(quietApp, data);
                 UiPolishTests.Run(quietApp);
                 HomeTests.Run(quietApp);
@@ -85,6 +86,7 @@ internal static class Program
             ManagementTests.Run(app, folder);
             GroupTests.Run(app, folder);
             ManagementLayoutTests.Run(app);
+            VisualRefreshTests.Run(app);
             NavigationTests.Run(app);
             TrashTests.Run(app, folder);
             OptimizationTests.Run(app, folder);

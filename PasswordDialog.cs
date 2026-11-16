@@ -12,24 +12,29 @@ public sealed class PasswordDialog : Window
         var dialog = new PasswordDialog { Title = create ? "Protéger la note" : "Mot de passe des notes", Width = 400,
             SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterScreen,
             ShowInTaskbar = false, Topmost = true };
-        var panel = new StackPanel { Margin = new Thickness(22) };
-        panel.Children.Add(new TextBlock { Text = create
+        var panel = new StackPanel(); panel.SetResourceReference(FrameworkElement.StyleProperty, "DialogBodyStyle");
+        var heading = new TextBlock { Text = create ? "Protéger la note" : "Déverrouiller les notes" };
+        heading.SetResourceReference(FrameworkElement.StyleProperty, "DialogHeadingStyle"); panel.Children.Add(heading);
+        var description = new TextBlock { Text = create
             ? $"Choisissez un mot de passe commun aux notes protégées ({MinimumPasswordLength} caractères minimum). En cas d’oubli, leur contenu ne pourra pas être récupéré."
-            : "Saisissez le mot de passe commun aux notes protégées.", TextWrapping = TextWrapping.Wrap });
-        var password = new PasswordBox { Margin = new Thickness(0, 14, 0, 10) };
+            : "Saisissez le mot de passe commun aux notes protégées." };
+        description.SetResourceReference(FrameworkElement.StyleProperty, "DialogDescriptionStyle"); panel.Children.Add(description);
+        panel.Children.Add(new TextBlock { Text = "Mot de passe", Margin = new Thickness(0, 16, 0, 6) });
+        var password = new PasswordBox();
         System.Windows.Automation.AutomationProperties.SetName(password, "Mot de passe");
         panel.Children.Add(password);
-        var confirm = new PasswordBox { Margin = new Thickness(0, 5, 0, 10) };
+        var confirm = new PasswordBox();
         if (create)
         {
-            panel.Children.Add(new TextBlock { Text = "Confirmer le mot de passe" }); panel.Children.Add(confirm);
+            panel.Children.Add(new TextBlock { Text = "Confirmer le mot de passe", Margin = new Thickness(0, 16, 0, 6) }); panel.Children.Add(confirm);
             System.Windows.Automation.AutomationProperties.SetName(confirm, "Confirmer le mot de passe");
         }
-        var error = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.Firebrick };
+        var error = new TextBlock(); error.SetResourceReference(FrameworkElement.StyleProperty, "DialogErrorStyle");
         panel.Children.Add(error);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
-        var cancel = new Button { Content = "Annuler", IsCancel = true, Padding = new Thickness(12, 6, 12, 6), Margin = new Thickness(0, 0, 8, 0) };
-        var ok = new Button { Content = create ? "Protéger" : "Valider", IsDefault = true, Padding = new Thickness(12, 6, 12, 6) };
+        var buttons = new StackPanel(); buttons.SetResourceReference(FrameworkElement.StyleProperty, "DialogActionsStyle");
+        var cancel = new Button { Content = "Annuler", IsCancel = true }; cancel.SetResourceReference(FrameworkElement.StyleProperty, "DialogButtonStyle");
+        var ok = new Button { Content = create ? "Protéger" : "Valider", IsDefault = true };
+        ok.SetResourceReference(FrameworkElement.StyleProperty, "DialogPrimaryButtonStyle");
         ok.Click += (_, _) =>
         {
             if (create && password.Password.Length < MinimumPasswordLength) { error.Text = $"Utilisez au moins {MinimumPasswordLength} caractères."; return; }

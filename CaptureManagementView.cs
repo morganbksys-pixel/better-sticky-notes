@@ -38,17 +38,19 @@ public sealed class CaptureManagementView : ScrollViewer
         renderedState = state;
         viewer?.Close(); viewer = null;
         var target = note;
-        var panel = new StackPanel { Margin = new Thickness(0, 8, 8, 0) };
-        panel.Children.Add(new TextBlock { Text = target.DisplayTitle, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold });
-        panel.Children.Add(new TextBlock { Text = target.Captures.Count == 1 ? "1 capture" : $"{target.Captures.Count} captures", Foreground = Brushes.DimGray, Margin = new Thickness(0, 4, 0, 10) });
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 8, 0) };
+        panel.Children.Add(new TextBlock { Text = target.DisplayTitle, FontSize = 14, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold });
+        panel.Children.Add(new TextBlock { Text = target.Captures.Count == 1 ? "1 capture" : $"{target.Captures.Count} captures", Margin = new Thickness(0, 4, 0, 10) });
         if (target.Deleted)
             panel.Children.Add(new TextBlock { Text = "Dans la corbeille, vous pouvez consulter et enregistrer les images. Restaurez la note pour modifier ses captures.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 10) });
         if (target.Captures.Count == 0)
             panel.Children.Add(new TextBlock { Text = target.Deleted ? "Cette note ne contient aucune capture." : "Aucune capture dans cette note. Pour en ajouter, affichez le post-it puis choisissez ⋯ → Capturer cet écran.", TextWrapping = TextWrapping.Wrap });
         foreach (var capture in target.Captures)
         {
-            var item = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
-            var preview = new Button { Height = 115, Padding = new Thickness(3), HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = "Ouvrir la capture" };
+            var item = new StackPanel();
+            var preview = new Button { Height = 115, Margin = new Thickness(0), Padding = new Thickness(4), HorizontalContentAlignment = HorizontalAlignment.Stretch, ToolTip = "Ouvrir la capture" };
+            preview.SetResourceReference(Control.BackgroundProperty, "AppSubtleSurfaceBrush");
+            System.Windows.Automation.AutomationProperties.SetName(preview, "Ouvrir la capture");
             try
             {
                 preview.Content = new Image { Source = app.Store.LoadCapture(target, capture, thumbnail: true), Stretch = Stretch.Uniform };
@@ -60,7 +62,7 @@ public sealed class CaptureManagementView : ScrollViewer
                 preview.IsEnabled = false;
             }
             item.Children.Add(preview);
-            item.Children.Add(new TextBlock { Text = $"{capture.CreatedAtUtc.ToLocalTime():dd/MM/yyyy à HH:mm:ss}\n{capture.Width} × {capture.Height} pixels", TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = Brushes.DimGray, Margin = new Thickness(2, 6, 0, 4) });
+            item.Children.Add(new TextBlock { Text = $"{capture.CreatedAtUtc.ToLocalTime():dd/MM/yyyy à HH:mm}\n{capture.Width} × {capture.Height} pixels", TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 8, 0, 6) });
             var actions = new WrapPanel();
             var export = new Button { Content = "Enregistrer sous…", Padding = new Thickness(8, 6, 8, 6), Margin = new Thickness(0, 2, 4, 2) };
             export.Click += (_, _) => Export(target, capture);
@@ -68,14 +70,18 @@ public sealed class CaptureManagementView : ScrollViewer
             if (!target.Deleted)
             {
                 var remove = new Button { Content = "Supprimer", Padding = new Thickness(8, 6, 8, 6), Margin = new Thickness(0, 2, 0, 2), ToolTip = "Supprimer uniquement cette capture" };
+                remove.SetResourceReference(StyleProperty, "DangerOutlineButtonStyle");
                 remove.Click += async (_, _) => { await app.RemoveCapturesAsync(target, [capture]); Refresh(); changed(); };
                 actions.Children.Add(remove);
             }
-            item.Children.Add(actions); panel.Children.Add(item);
+            item.Children.Add(actions);
+            var card = new Border { Child = item, Padding = new Thickness(12), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 0, 12) };
+            card.SetResourceReference(Border.BorderBrushProperty, "AppBorderBrush"); panel.Children.Add(card);
         }
         if (!target.Deleted && target.Captures.Count > 0)
         {
             var removeAll = new Button { Content = "Supprimer toutes les captures…", Padding = new Thickness(8, 6, 8, 6), HorizontalAlignment = HorizontalAlignment.Left };
+            removeAll.SetResourceReference(StyleProperty, "DangerOutlineButtonStyle");
             removeAll.Click += async (_, _) =>
             {
                 var captures = target.Captures.ToArray();
@@ -88,6 +94,9 @@ public sealed class CaptureManagementView : ScrollViewer
             };
             panel.Children.Add(removeAll);
         }
+        foreach (var text in panel.Children.OfType<TextBlock>().Skip(1)) text.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
+        foreach (var card in panel.Children.OfType<Border>())
+            foreach (var text in ((StackPanel)card.Child).Children.OfType<TextBlock>()) text.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedTextBrush");
         Content = panel;
     }
 

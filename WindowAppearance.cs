@@ -17,11 +17,12 @@ public static class WindowAppearance
         window.AllowsTransparency = true;
         window.Background = Brushes.Transparent;
         window.FontFamily = new FontFamily("Segoe UI"); window.FontSize = 13;
+        window.SetResourceReference(Control.ForegroundProperty, "AppTextBrush");
         WindowChrome.SetWindowChrome(window, new WindowChrome { CaptionHeight = 0, ResizeBorderThickness = window.ResizeMode == ResizeMode.NoResize ? new Thickness(0) : new Thickness(6), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(0) });
         var layout = new Grid();
         layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(38) });
         layout.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        var header = new Grid { Background = new SolidColorBrush(Color.FromRgb(246, 246, 245)) };
+        var header = new Grid(); header.SetResourceReference(Panel.BackgroundProperty, "AppSubtleSurfaceBrush");
         header.ColumnDefinitions.Add(new ColumnDefinition()); header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var title = new TextBlock { Margin = new Thickness(16, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         title.SetBinding(TextBlock.TextProperty, new Binding(nameof(Window.Title)) { Source = window }); header.Children.Add(title);
@@ -47,7 +48,9 @@ public static class WindowAppearance
         Add("\uE711", "Fermer", window.Close);
         Grid.SetColumn(buttons, 1); header.Children.Add(buttons); layout.Children.Add(header);
         Grid.SetRow(content, 1); layout.Children.Add(content);
-        var surface = new Border { Background = Brushes.White, BorderBrush = new SolidColorBrush(Color.FromRgb(210, 212, 215)), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Child = layout };
+        var surface = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Child = layout };
+        surface.SetResourceReference(Border.BackgroundProperty, "AppSurfaceBrush");
+        surface.SetResourceReference(Border.BorderBrushProperty, "AppWindowBorderBrush");
         layout.SizeChanged += (_, e) => layout.Clip = new RectangleGeometry(new Rect(e.NewSize), 11, 11);
         window.Content = surface;
     }
